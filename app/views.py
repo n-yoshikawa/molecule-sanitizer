@@ -99,6 +99,27 @@ def process_project(project):
     project.is_ready = True
     project.save()
 
+def apply_filter(molecules, profile, filter_names, smiles):
+    if not molecules:
+        return molecules
+    if filter_names:
+        filter_names = filter_names.split('+')
+        for filter_name in filter_names:
+            if filter_name in ['Ro5', 'PAINS', 'MCF']:
+                tag = Tag.objects.get(name=filter_name)
+                molecules = molecules.filter(tags=tag)
+            elif filter_name == 'like':
+                evaluation = Evaluation.objects.get(user=profile, evaluation_type='Like')
+                molecules = molecules.filter(evaluation=evaluation)
+            elif filter_name == 'dislike':
+                evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
+                molecules = molecules.filter(evaluation=evaluation)
+    if smiles is not None:
+        p = Chem.MolFromSmiles(smiles)
+        if p:
+            molecules = [m for m in molecules if Chem.MolFromSmiles(m.smiles).HasSubstructMatch(p)]
+    return molecules
+
 
 def viewer(request, project_id):
     project = Project.objects.get(id=project_id)
@@ -116,24 +137,11 @@ def viewer(request, project_id):
                 profile = UserProfile.objects.get(user=None)
             except:
                 profile = UserProfile.objects.create(user=None)
+        molecules = apply_filter(molecules, profile, filter_names, smiles)
         filter_names_url = None
         if filter_names:
             filter_names_url = filter_names.rstrip()
             filter_names = filter_names.split('+')
-            for filter_name in filter_names:
-                if filter_name in ['Ro5', 'PAINS', 'MCF']:
-                    tag = Tag.objects.get(name=filter_name)
-                    molecules = molecules.filter(tags=tag)
-                elif filter_name == 'like':
-                    evaluation = Evaluation.objects.get(user=profile, evaluation_type='Like')
-                    molecules = molecules.filter(evaluation=evaluation)
-                elif filter_name == 'dislike':
-                    evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
-                    molecules = molecules.filter(evaluation=evaluation)
-        if smiles is not None:
-            p = Chem.MolFromSmiles(smiles)
-            if p and molecules:
-                molecules = [m for m in molecules if Chem.MolFromSmiles(m.smiles).HasSubstructMatch(p)]
         pages = [i+1 for i in range((len(molecules) + n - 1) // n)]
         if len(pages) > 10:
             if page <= 5:
@@ -172,32 +180,13 @@ def export(request, project_id):
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
         smiles = request.GET.get('smiles')
+
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
-            try:
-                profile = UserProfile.objects.get(user=None)
-            except:
-                profile = UserProfile.objects.create(user=None)
-        filter_names_url = None
-        if filter_names:
-            filter_names_url = filter_names.rstrip()
-            filter_names = filter_names.split('+')
-            for filter_name in filter_names:
-                if filter_name in ['Ro5', 'PAINS', 'MCF']:
-                    tag = Tag.objects.get(name=filter_name)
-                    molecules = molecules.filter(tags=tag)
-                elif filter_name == 'like':
-                    evaluation = Evaluation.objects.get(user=profile, evaluation_type='Like')
-                    molecules = molecules.filter(evaluation=evaluation)
-                elif filter_name == 'dislike':
-                    evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
-                    molecules = molecules.filter(evaluation=evaluation)
-        if smiles is not None:
-            p = Chem.MolFromSmiles(smiles)
-            if p and molecules:
-                molecules = [m for m in molecules if Chem.MolFromSmiles(m.smiles).HasSubstructMatch(p)]
+            profile = UserProfile.objects.get(user=None)
+        molecules = apply_filter(molecules, profile, filter_names, smiles)
         return HttpResponse("\n".join([mol.smiles for mol in molecules]))
     else:
         return HttpResponse("")
@@ -222,23 +211,15 @@ def evaluation(request):
         action = request.POST.get('action')
         if action == 'all':
             filter_names = request.POST.get('filter')
+            if filter_names == "":
+                filter_names = None
             smiles = request.POST.get('smiles')
+            if smiles == "":
+                smiles = None
             project_id = request.POST.get('project_id')
             project = Project.objects.get(id=project_id)
             molecules = Molecule.objects.filter(project=project)
-            print("filter_names:", filter_names)
-            if filter_names:
-                filter_names = filter_names.split('+')
-                for filter_name in filter_names:
-                    if filter_name in ['Ro5', 'PAINS', 'MCF']:
-                        tag = Tag.objects.get(name=filter_name)
-                        molecules = molecules.filter(tags=tag)
-                    elif filter_name == 'like':
-                        evaluation = Evaluation.objects.get(user=profile, evaluation_type='Like')
-                        molecules = molecules.filter(evaluation=evaluation)
-                    elif filter_name == 'dislike':
-                        evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
-                        molecules = molecules.filter(evaluation=evaluation)
+            molecules = apply_filter(molecules, profile, filter_names, smiles)
             for molecule in molecules:
                 with transaction.atomic():
                     try:
@@ -260,7 +241,6 @@ def evaluation(request):
 
         molecule_id = request.POST.get('molecule_id')
         molecule = Molecule.objects.get(id=molecule_id)
-        # TODO: check duplicate
         with transaction.atomic():
             if evaluation_type == 'like':
                 if action == 'add':
