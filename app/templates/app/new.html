@@ -1,0 +1,20 @@
+{% extends "app/base.html" %}
+{% block title %}Sanitize It Yourself{% endblock title %}
+{% block main %}
+<main class="min-vh-100">
+{% if request.user.is_authenticated %}
+<section class="container min-vh-100">
+    <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">New Project</small></h1>
+    <form action="{% url 'new' %}" method="post">
+        {% csrf_token %}
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" placeholder="Project Name" name="project_name">
+        </div>
+        <textarea class="form-control" name="smiles_list" rows="25" placeholder="SMILES list&#13;&#13;Example:&#13;CC(C)(C)c1ccc2occ(CC(=O)Nc3ccccc3F)c2c1&#13;C[C@@H]1CC(Nc2cncc(-c3nncn3C)c2)C[C@@H](C)C1"></textarea>
+        <p class="mt-4"><strong>Please do not include any secret data.</strong> Your molecules are accessible from others by sharing a link to the project.</p>
+        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+    </form>
+</section>
+{% endif %}
+</main>
+{% endblock main %}

@@ -1,0 +1,316 @@
+{% extends "app/base.html" %}
+{% block title %}Project Viewer - Sanitize It Yourself{% endblock title %}
+{% block main %}
+{% if smiles %}
+<script type="text/javascript" language="javascript" src="/static/app/jsme/jsme.nocache.js"></script>
+{% endif %}
+<section class="pt-3 container min-vh-100">
+  <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">Molecule Viewer<small class="fw-light font-sm"> ― {{ project.name }}</small></h1>
+</h1>
+  {% if project.is_ready %}
+  <h2 class="h4">Filter</h2>
+  <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="inlineCheckbox1" name="filter" value="Ro5" {% if 'Ro5' in filter_names %}checked{% endif %}>
+    <label class="form-check-label" for="inlineCheckbox1">Rule of Five (Ro5)</label>
+  </div>
+  <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="inlineCheckbox2" name="filter" value="PAINS" {% if 'PAINS' in filter_names %}checked{% endif %}>
+    <label class="form-check-label" for="inlineCheckbox2">PAINS</label>
+  </div>
+  <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="inlineCheckbox3" name="filter" value="MCF" {% if 'MCF' in filter_names %}checked{% endif %}>
+    <label class="form-check-label" for="inlineCheckbox3">MCF</label>
+  </div>
+  <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="inlineCheckbox4" name="filter" value="dislike" {% if 'dislike' in filter_names %}checked{% endif %}>
+    <label class="form-check-label" for="inlineCheckbox4">&#x1f44e;</label>
+  </div>
+  <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="inlineCheckbox5" name="filter" value="like" {% if 'like' in filter_names %}checked{% endif %}>
+    <label class="form-check-label" for="inlineCheckbox5">&#x1f44d;</label>
+  </div>
+  <div class="form-check form-check-inline">
+  {% if smiles is None %}
+  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smiles" value="{{ smiles|urlencode}}" disabled>
+      <a href="{% url 'search' project.id %}">Substructure search</a>
+  {% else %}
+  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smiles" value="{{ smiles|urlencode }}" checked>
+      <label class="form-check-label" for="inlineCheckbox6">Substructure <code>{{ smiles }}</code></label>
+  {% endif %}
+  </div>
+  {% if smiles is not None %}
+  <p>Searching Substructure:</p>
+  <div id="jsme_container"></div>
+  {% endif %}
+  <div class="mt-4">
+      <button class="btn btn-danger" id="dislike_all">&#x1f44e; to all</button>
+      <button class="btn btn-info text-light" id="like_all">&#x1f44d; to all</button>
+      <button class="btn btn-primary" id="clear_all">Clear Evaluations</button>
+      <a href="{% url 'export' project.id %}{% if url_params %}?{{ url_params }}{% endif %}" class="btn btn-secondary" download="{{ project.name }}.smi">Export</a>
+  </div>
+  <hr class="mt-4 mb-5">
+  {% if not mol_info %}
+  <p>No molecule is found.</p>
+  {% endif %}
+  {% load static %}
+  <div class="row row-cols-3 row-cols-lg-6 g-2">
+  {% for molecule, liked, disliked in mol_info %}
+    <div class="col">
+      <div class="card">
+      <div class="dropdown text-end">
+        <button class="btn btn-sm dropdown-toggle text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
+            <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
+            <li><a class="dropdown-item" href="{% url 'search' project.id %}?smiles={{ molecule.smiles|urlencode }}">Substructure Search</a></li>
+        </ul>
+      </div>
+        {% if molecule.inchikey == "" %}
+        <span>Invalid SMILES: {{molecule.smiles}}</span>
+        {% else %}
+        <div class="ratio ratio-4x3"><img src="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png"></div>
+        {% endif %}
+        <div class="card-body">
+            {% for tag in molecule.tags.all %}
+            <span class="badge rounded-pill bg-{{tag.badge_type}}"><small>{{tag.name}}</small></span>
+            {% empty %}
+            <span class="badge rounded-pill bg-light"><small></small></span>
+          {% endfor %}
+        </div>
+        <div class="btn-group d-flex w-100">
+            <button type="button" class="btn w-100 {% if disliked %}btn-danger disliked{% else %}btn-outline-light dislike{% endif %}" id="dislike_{{molecule.pk}}" value="{{molecule.pk}}">&#x1f44e; <span class="{% if disliked %}text-light{% else %}text-secondary{% endif %}" id="dislike_count_{{ molecule.pk }}">{% if molecule.dislike_count > 0 %}{{ molecule.dislike_count }}{% endif %}</span></button>
+            <button type="button" class="btn w-100 {% if liked %}btn-info liked{% else %}btn-outline-light like{%endif %}" id="like_{{molecule.pk}}" value="{{molecule.pk}}">&#x1f44d; <span class="{% if liked %}text-light{% else %}text-secondary{% endif %}" id="like_count_{{ molecule.pk }}">{% if molecule.like_count > 0 %}{{ molecule.like_count }}{% endif %}</span></button>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+  <div class="container mt-5">
+    <ul class="pagination justify-content-center">
+        {% if prev_page %}
+      <li class="page-item">
+          <a class="page-link" href="{% url 'viewer' project_id %}?{% if url_params %}{{ url_params }}&{% endif %}page={{ prev_page }}" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+        {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-label="Previous"><span aria-hidden="true">&laquo;</span></span>
+      </li>
+        {% endif %}
+      {% for page in pages %} 
+      {% if page != -1 %}
+      <li class="page-item{% if page == current_page %} active{% endif %}"><a class="page-link" href="{% url 'viewer' project_id %}?{% if url_params %}{{ url_params }}&{% endif %}page={{ page }}">{{ page }}</a></li>
+      {% else %}
+      <li class="page-item"><span class="page-link">...</span></li>
+      {% endif %}
+      {% endfor %}
+      {% if next_page %}
+      <li class="page-item">
+        <a class="page-link" href="{% url 'viewer' project_id %}?{% if url_params %}{{ url_params }}&{% endif %}page={{ next_page }}" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </span>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% else %}
+  <p>This project is not ready. This page will be automatically reloaded in 3 seconds.</p>
+  <script>
+  setTimeout(function(){ window.location.reload(1); }, 3000);
+  </script>
+  {% endif %}
+</section>
+</main>
+{% endblock main %}
+
+{% block script %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+    {% if smiles %}
+    function jsmeOnLoad() {
+        jsmeApplet = new JSApplet.JSME("jsme_container", "200px", "200px", {
+            "options": "depict", "smiles": "{{ smiles }}"
+        });
+    }
+    {% endif %}
+function send_evaluation(type, action, molecule_id) {
+    var is_success = false;
+    $.ajax({
+        url: '{% url "evaluation" %}',
+        type: 'POST',
+        data: {
+            'evaluation_type': type,
+            'action': action,
+            'molecule_id': molecule_id,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        dataType: 'json',
+        success: function (data) {
+            if (data.like_count > 0) {
+                $('#like_count_'+molecule_id).html(data.like_count);
+            } else {
+                $('#like_count_'+molecule_id).html('');
+            }
+            if (data.dislike_count > 0) {
+                $('#dislike_count_'+molecule_id).html(data.dislike_count);
+            } else {
+                $('#dislike_count_'+molecule_id).html('');
+            }
+        }
+    }).fail(function() {
+        return false;
+    });
+    return true;
+}
+function like_on(molecule_id) {
+    $('#like_'+molecule_id).removeClass('like').addClass('liked');
+    $('#like_'+molecule_id).removeClass('btn-outline-light').addClass('btn-info');
+    $('#like_count_'+molecule_id).removeClass('text-secondary').addClass('text-light');
+}
+
+function like_off(molecule_id) {
+    $('#like_'+molecule_id).removeClass('liked').addClass('like');
+    $('#like_'+molecule_id).removeClass('btn-info').addClass('btn-outline-light');
+    $('#like_count_'+molecule_id).removeClass('text-light').addClass('text-secondary');
+}
+
+function dislike_on(molecule_id) {
+    $('#dislike_'+molecule_id).removeClass('dislike').addClass('disliked');
+    $('#dislike_'+molecule_id).removeClass('btn-outline-light').addClass('btn-danger');
+    $('#dislike_count_'+molecule_id).removeClass('text-secondary').addClass('text-light');
+}
+function dislike_off(molecule_id) {
+    $('#dislike_'+molecule_id).removeClass('disliked').addClass('dislike');
+    $('#dislike_'+molecule_id).removeClass('btn-danger').addClass('btn-outline-light');
+    $('#dislike_count_'+molecule_id).removeClass('text-light').addClass('text-secondary');
+}
+
+$(document).ready(function() {
+    $(document).on('click', '.like', function(){
+        var dislike = $('#dislike_'+$(this).val());
+        if (dislike.hasClass('disliked')) {
+            if (send_evaluation('like', 'toggle', $(this).val())) {
+                dislike_off($(this).val());
+                like_on($(this).val());
+            }
+        } else if (send_evaluation('like', 'add', $(this).val())) {
+            like_on($(this).val());
+        } 
+    }); 
+    $(document).on('click', '.liked', function(){
+        if (send_evaluation('like', 'remove', $(this).val())) {
+            like_off($(this).val());
+        }
+    }); 
+    $(document).on('click', '.dislike', function(){
+        var like = $('#like_'+$(this).val());
+        if (like.hasClass('liked')) {
+            if (send_evaluation('dislike', 'toggle', $(this).val())) {
+                like_off($(this).val());
+                dislike_on($(this).val());
+            }
+        } else if (send_evaluation('dislike', 'add', $(this).val())) {
+            dislike_on($(this).val());
+        }
+    }); 
+    $(document).on('click', '.disliked', function(){
+        if (send_evaluation('dislike', 'remove', $(this).val())) {
+            dislike_off($(this).val());
+        }
+    }); 
+    $(document).on('click', '#like_all', function(){
+        $.ajax({
+            url: '{% url "evaluation" %}',
+            type: 'POST',
+            data: {
+                'evaluation_type': 'like',
+                'action': 'all',
+                'project_id': '{{ project.id }}',
+                'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
+                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            dataType: 'json',
+            success: function (data) {
+                location.reload();
+            }
+        });
+    }); 
+    $(document).on('click', '#dislike_all', function(){
+        $.ajax({
+            url: '{% url "evaluation" %}',
+            type: 'POST',
+            data: {
+                'evaluation_type': 'dislike',
+                'action': 'all',
+                'project_id': '{{ project.id }}',
+                'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
+                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            dataType: 'json',
+            success: function (data) {
+                location.reload();
+            }
+        });
+    }); 
+    $(document).on('click', '#clear_all', function(){
+        $.ajax({
+            url: '{% url "evaluation" %}',
+            type: 'POST',
+            data: {
+                'evaluation_type': 'clear',
+                'action': 'all',
+                'project_id': '{{ project.id }}',
+                'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
+                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            dataType: 'json',
+            success: function (data) {
+                location.reload();
+            }
+        });
+    }); 
+    $('input[type=checkbox][name=filter]').change(function() {
+        var checkboxValues = [];
+        $('input[type="checkbox"][name=filter]:checked').each(function(index, elem) {
+            checkboxValues.push($(elem).val());
+        });
+        if (checkboxValues.length == 0) {
+            {% if smiles %}
+            location.href = "{% url 'viewer' project.id %}?smiles=" + encodeURIComponent("{{ smiles }}");
+            {% else %}
+            location.href = "{% url 'viewer' project.id %}";
+            {% endif %}
+        }
+        else {
+            {% if smiles %}
+            location.href = "{% url 'viewer' project.id %}?smiles=" + encodeURIComponent("{{ smiles }}") + "&filter=" + checkboxValues.join('%2B');
+            {% else %}
+            location.href = "{% url 'viewer' project.id %}?filter=" + checkboxValues.join('%2B');
+            {% endif %}
+        }
+    });
+    $('input[type=checkbox][name=smiles]').change(function() {
+        var checkboxValues = [];
+        $('input[type="checkbox"][name=filter]:checked').each(function(index, elem) {
+            checkboxValues.push($(elem).val());
+        });
+        if (checkboxValues.length == 0) {
+            location.href = "{% url 'viewer' project.id %}";
+        }
+        else {
+            location.href = "{% url 'viewer' project.id %}?filter=" + checkboxValues.join('%2B');
+        }
+    });
+});
+</script>
+
+{% endblock script %}

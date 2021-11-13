@@ -1,0 +1,44 @@
+{% extends "app/base.html" %}
+{% block title %}Sanitize It Yourself{% endblock title %}
+{% block main %}
+<main class="min-vh-100">
+
+<section class="pt-3 container min-vh-100">
+  <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">Substructure Search<small class="fw-light font-sm"> ― {{ project.name }}</small></h1>
+
+<div id="jsme_container"></div>
+<div class="form-group mt-4">
+  <label for="smiles">Substructure SMILES</label>
+  <input type="text" class="form-control" id="smiles">
+</div>
+<button class="btn btn-primary" onclick="search()">Search</button>
+
+</section>
+</main>
+{% endblock main %}
+{% block script %}
+<script type="text/javascript" language="javascript" src="/static/app/jsme/jsme.nocache.js"></script>
+<script>
+function jsmeOnLoad() {
+  {% if smiles is None %}
+  var initial_smiles = "";
+  {% else %}
+  var initial_smiles = "{{ smiles }}";
+  {% endif %}
+  jsmeApplet = new JSApplet.JSME("jsme_container", "600px", "400px", {
+    "smiles": initial_smiles });
+  jsmeApplet.setCallBack("AfterStructureModified", showEvent);
+  document.getElementById("smiles").value = initial_smiles;
+}
+
+function showEvent(event) {
+  var log = document.getElementById("smiles");
+  log.value = event.src.smiles();
+}
+function search() {
+  var query = document.getElementById('smiles').value;
+  var url = '{% url 'viewer' project.id %}?smiles=' + encodeURIComponent(query);
+  location.href = url;
+}
+  </script>
+{% endblock %}

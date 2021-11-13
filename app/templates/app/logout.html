@@ -1,0 +1,10 @@
+{% extends "app/base.html" %}
+{% block title %}Logout{% endblock title %}
+{% block main %}
+<main class="min-vh-100">
+  <section class="pt-3 container">
+    <p>You are logged out.</p>
+    <p><a href="{% url 'index' %}">Back to top</a></p>
+  </section>
+</main>
+{% endblock main %}
