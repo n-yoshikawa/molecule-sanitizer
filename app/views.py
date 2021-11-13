@@ -38,6 +38,9 @@ def index(request):
 def new(request):
     if request.method == 'POST':
         smiles_list = request.POST['smiles_list']
+        nlines = len(smiles_list.splitlines())
+        if nlines > 10000:
+            return render(request,'app/new.html', {'error': 'SMILES list is too long'})
         name = request.POST['project_name']
         user = UserSocialAuth.objects.get(user_id=request.user.id)
         profile = UserProfile.objects.get(user=user)
@@ -68,7 +71,7 @@ def process_project(project):
     _base_dir = os.path.split(__file__)[0]
     _mcf_csv = pd.read_csv(os.path.join(_base_dir, 'mcf.csv'))
     mcf_list = [Chem.MolFromSmarts(x) for x in _mcf_csv['smarts'].values]
-    for smiles in smiles_list.split('\n'):
+    for smiles in smiles_list.splitlines():
         mol = Molecule.objects.create(project=project)
         mol.smiles = smiles
         mol_rdkit = Chem.MolFromSmiles(smiles)
@@ -180,7 +183,6 @@ def export(request, project_id):
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
         smiles = request.GET.get('smiles')
-
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)

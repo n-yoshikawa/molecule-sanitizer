@@ -5,6 +5,7 @@
 {% if request.user.is_authenticated %}
 <section class="container min-vh-100">
     <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">New Project</small></h1>
+    {% if error %}<div class="alert alert-danger" role="alert">Error — {{ error }}</div>{% endif %}
     <form action="{% url 'new' %}" method="post">
         {% csrf_token %}
         <div class="input-group mb-3">
