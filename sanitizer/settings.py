@@ -106,13 +106,17 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = [
     'social_core.backends.twitter.TwitterOAuth',
+    'social_core.backends.orcid.ORCIDOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 SOCIAL_AUTH_TWITTER_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxx'
 SOCIAL_AUTH_TWITTER_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+SOCIAL_AUTH_ORCID_KEY = ''
+SOCIAL_AUTH_ORCID_SECRET = ''
 
 
 # Internationalization

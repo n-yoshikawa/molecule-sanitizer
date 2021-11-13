@@ -25,12 +25,17 @@ def create_new_user(user):
 def index(request):
     if request.user.is_authenticated:
         user = UserSocialAuth.objects.get(user_id=request.user.id)
+        if user.provider == 'twitter':
+            username = '@' + user.user.username
+        else:
+            username = user.user.get_full_name()
         try:
             profile = UserProfile.objects.get(user=user)
         except UserProfile.DoesNotExist:
             profile = create_new_user(user)
         projects = Project.objects.filter(owner=profile)
-        return render(request,'app/index.html', {'user': user, 'projects': projects})
+        return render(request,'app/index.html', {'user': user, 'username': username, 
+                                                 'projects': projects})
     else:
         return render(request,'app/index.html')
 
