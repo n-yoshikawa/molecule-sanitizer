@@ -2,10 +2,9 @@
 {% block title %}Molecule Info - Sanitize It Yourself{% endblock title %}
 {% block meta %}
 {% load static %}
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Sanitize It Yourself">
-<meta name="twitter:description" content="{{ molecule.inchikey }}">
-<meta name="twitter:image" content="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png">
+<meta name="twitter:description" content="{{ molecule.smiles }}">
 {% endblock meta %}
 {% block main %}
 <section class="pt-3 container min-vh-100">
@@ -21,7 +20,7 @@
           {% elif tag.name == 'PAINS' %}
           <span class="badge rounded-pill bg-danger"><small>{{tag.name}}</small></span>
           {% elif tag.name == 'MCF' %}
-          <span class="badge rounded-pill bg-dark"><small>{{tag.name}}</small></span>
+          <span class="badge rounded-pill bg-warning text-dark"><small>{{tag.name}}</small></span>
           {% endif %}
         {% endfor %}
       </figcaption>
