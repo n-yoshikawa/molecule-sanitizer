@@ -1,5 +1,12 @@
 {% extends "app/base.html" %}
 {% block title %}Molecule Info - Sanitize It Yourself{% endblock title %}
+{% block meta %}
+{% load static %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sanitize It Yourself">
+<meta name="twitter:description" content="{{ molecule.inchikey }}">
+<meta name="twitter:image" content="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png">
+{% endblock meta %}
 {% block main %}
 <section class="pt-3 container min-vh-100">
   <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">Molecule Info</h1>
@@ -8,8 +15,14 @@
     <figure class="figure">
       <img class="figure-img img-fluid" src="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png">
       <figcaption class="figure-caption">
-        {% for tag in molecule.tags.all %}
-        <span class="badge rounded-pill bg-{{tag.badge_type}}">{{tag.name}}</span>
+          {% for tag in molecule.tags.all %}
+          {% if tag.name == 'Ro5' %}
+          <span class="badge rounded-pill bg-primary"><small>{{tag.name}}</small></span>
+          {% elif tag.name == 'PAINS' %}
+          <span class="badge rounded-pill bg-danger"><small>{{tag.name}}</small></span>
+          {% elif tag.name == 'MCF' %}
+          <span class="badge rounded-pill bg-dark"><small>{{tag.name}}</small></span>
+          {% endif %}
         {% endfor %}
       </figcaption>
     </figure>
@@ -44,7 +57,23 @@
     <a class="btn btn-primary" href="https://twitter.com/intent/tweet?url=https://sanitizer.chemical.space/molecule/{{ molecule.uuid }}"><i class="bi bi-twitter"></i> Tweet</a>
 <a class="btn btn-primary" href="https://twitter.com/intent/tweet?text=@retrosynthchan {{ molecule.smiles }}">Send to @retrosynthchan</a>
 </div>
+{% if evaluations %}
+<h2 class="h3 pt-5 pb-2 mb-3 border-bottom">Evaluations</h1>
+<table class="table table-bordered w-50 mx-auto mt-5">
+  <tr>
+      <th>Liked users: {{ molecule.like_count }}</th>
+      <th>Disliked users: {{ molecule.dislike_count }}</th>
+  </tr>
+  {% for like, dislike in evaluations %}
+  <tr>
+      <td>{% if like is not None %}{{ like }}{% endif %}</th>
+      <td>{% if dislike is not None %}{{ dislike }}{% endif %}</th>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
 {% if pains %}
+<h2 class="h3 pt-5 pb-2 mb-3 border-bottom">PAINS Filter Match</h1>
 {% for p in pains %}
   <div class="text-center">
     <figure class="figure">
@@ -58,93 +87,4 @@
 {% endblock main %}
 
 {% block script %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-<script>
-function send_evaluation(type, action, molecule_id) {
-    var is_success = false;
-    $.ajax({
-        url: '{% url "evaluation" %}',
-        type: 'POST',
-        data: {
-            'evaluation_type': type,
-            'action': action,
-            'molecule_id': molecule_id,
-            'csrfmiddlewaretoken': '{{ csrf_token }}'
-        },
-        dataType: 'json',
-        success: function (data) {
-            if (data.like_count > 0) {
-                $('#like_count_'+molecule_id).html(data.like_count);
-            } else {
-                $('#like_count_'+molecule_id).html('');
-            }
-            if (data.dislike_count > 0) {
-                $('#dislike_count_'+molecule_id).html(data.dislike_count);
-            } else {
-                $('#dislike_count_'+molecule_id).html('');
-            }
-        }
-    }).fail(function() {
-        return false;
-    });
-    return true;
-}
-function like_on(molecule_id) {
-    $('#like_'+molecule_id).removeClass('like').addClass('liked');
-    $('#like_'+molecule_id).removeClass('btn-outline-light').addClass('btn-info');
-    $('#like_count_'+molecule_id).removeClass('text-secondary').addClass('text-light');
-}
-
-function like_off(molecule_id) {
-    $('#like_'+molecule_id).removeClass('liked').addClass('like');
-    $('#like_'+molecule_id).removeClass('btn-info').addClass('btn-outline-light');
-    $('#like_count_'+molecule_id).removeClass('text-light').addClass('text-secondary');
-}
-
-function dislike_on(molecule_id) {
-    $('#dislike_'+molecule_id).removeClass('dislike').addClass('disliked');
-    $('#dislike_'+molecule_id).removeClass('btn-outline-light').addClass('btn-danger');
-    $('#dislike_count_'+molecule_id).removeClass('text-secondary').addClass('text-light');
-}
-function dislike_off(molecule_id) {
-    $('#dislike_'+molecule_id).removeClass('disliked').addClass('dislike');
-    $('#dislike_'+molecule_id).removeClass('btn-danger').addClass('btn-outline-light');
-    $('#dislike_count_'+molecule_id).removeClass('text-light').addClass('text-secondary');
-}
-
-$(document).ready(function() {
-    $(document).on('click', '.like', function(){
-        var dislike = $('#dislike_'+$(this).val());
-        if (dislike.hasClass('disliked')) {
-            if (send_evaluation('like', 'toggle', $(this).val())) {
-                dislike_off($(this).val());
-                like_on($(this).val());
-            }
-        } else if (send_evaluation('like', 'add', $(this).val())) {
-            like_on($(this).val());
-        } 
-    }); 
-    $(document).on('click', '.liked', function(){
-        if (send_evaluation('like', 'remove', $(this).val())) {
-            like_off($(this).val());
-        }
-    }); 
-    $(document).on('click', '.dislike', function(){
-        var like = $('#like_'+$(this).val());
-        if (like.hasClass('liked')) {
-            if (send_evaluation('dislike', 'toggle', $(this).val())) {
-                like_off($(this).val());
-                dislike_on($(this).val());
-            }
-        } else if (send_evaluation('dislike', 'add', $(this).val())) {
-            dislike_on($(this).val());
-        }
-    }); 
-    $(document).on('click', '.disliked', function(){
-        if (send_evaluation('dislike', 'remove', $(this).val())) {
-            dislike_off($(this).val());
-        }
-    }); 
-});
-</script>
 {% endblock script %}

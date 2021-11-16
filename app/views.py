@@ -15,6 +15,7 @@ from rdkit.Chem import FilterCatalog
 from rdkit.Chem.FilterCatalog import FilterCatalogParams
 import pandas as pd
 import urllib.parse
+import itertools
 
 def create_new_user(user):
     profile = UserProfile.objects.create(user=user)
@@ -277,6 +278,22 @@ def evaluation(request):
 
 def molecule(request, molecule_id):
     molecule = Molecule.objects.get(uuid=molecule_id)
+    evaluations = None
+    if molecule.evaluation.all() is not None:
+        likes = molecule.evaluation.filter(evaluation_type='Like')
+        dislikes = molecule.evaluation.filter(evaluation_type='DisLike')
+        evaluations = []
+        def get_name(evaluation):
+            if evaluation is None:
+                return None
+            user = evaluation.user.user
+            if user.provider == 'twitter':
+                username = '@' + user.user.username
+            else:
+                username = user.user.get_full_name()
+            return username
+        for like, dislike in itertools.zip_longest(likes, dislikes):
+            evaluations.append((get_name(like), get_name(dislike)))
     if molecule.tags.filter(name='PAINS'):
         params = FilterCatalogParams()
         params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
@@ -298,8 +315,9 @@ def molecule(request, molecule_id):
             d.FinishDrawing()
             d.WriteDrawingText(path)
             pains.append(i)
-        return render(request,'app/molecule.html', {'molecule': molecule, 'pains': pains})
-    return render(request,'app/molecule.html', {'molecule': molecule})
+        return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations,
+                                                    'pains': pains})
+    return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations})
 
 def rename_project(request):
     if request.method == 'POST' and request.is_ajax():
