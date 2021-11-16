@@ -32,7 +32,6 @@ class Evaluation(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=32)
-    badge_type = models.CharField(max_length=16)
 
 
 class Molecule(models.Model):

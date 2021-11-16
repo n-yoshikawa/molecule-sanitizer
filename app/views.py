@@ -59,17 +59,17 @@ def new(request):
 def process_project(project):
     smiles_list = project.raw_text
     try:
-        rule_of_five = Tag.objects.get(name='Ro5', badge_type='info')
+        rule_of_five = Tag.objects.get(name='Ro5')
     except:
-        rule_of_five = Tag.objects.create(name='Ro5', badge_type='info')
+        rule_of_five = Tag.objects.create(name='Ro5')
     try:
-        pains_tag = Tag.objects.get(name='PAINS', badge_type='danger')
+        pains_tag = Tag.objects.get(name='PAINS')
     except:
-        pains_tag = Tag.objects.create(name='PAINS', badge_type='danger')
+        pains_tag = Tag.objects.create(name='PAINS')
     try:
-        mcf_tag = Tag.objects.get(name='MCF', badge_type='danger')
+        mcf_tag = Tag.objects.get(name='MCF')
     except:
-        mcf_tag = Tag.objects.create(name='MCF', badge_type='danger')
+        mcf_tag = Tag.objects.create(name='MCF')
     params = FilterCatalogParams()
     params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
     pains_filter = FilterCatalog.FilterCatalog(params)
@@ -80,7 +80,7 @@ def process_project(project):
         mol = Molecule.objects.create(project=project)
         mol.smiles = smiles
         mol_rdkit = Chem.MolFromSmiles(smiles)
-        if mol is None:
+        if mol_rdkit is None:
             mol.save()
             continue
         inchikey = Chem.rdinchi.MolToInchiKey(mol_rdkit)
@@ -122,6 +122,8 @@ def apply_filter(molecules, profile, filter_names, smiles):
             elif filter_name == 'dislike':
                 evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
                 molecules = molecules.filter(evaluation=evaluation)
+    # Reorder molecules so that invalid molecules comes later
+    molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
     if smiles is not None:
         p = Chem.MolFromSmiles(smiles)
         if p:

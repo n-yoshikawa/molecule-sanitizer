@@ -67,11 +67,20 @@
         {% if molecule.inchikey == "" %}
         <span>Invalid SMILES: {{molecule.smiles}}</span>
         {% else %}
+
+       <a href="{% url 'molecule' molecule.uuid %}">
         <div class="ratio ratio-4x3"><img src="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png"></div>
+       </a>
         {% endif %}
         <div class="card-body">
             {% for tag in molecule.tags.all %}
-            <span class="badge rounded-pill bg-{{tag.badge_type}}"><small>{{tag.name}}</small></span>
+            {% if tag.name == 'Ro5' %}
+            <span class="badge rounded-pill bg-primary"><small>{{tag.name}}</small></span>
+            {% elif tag.name == 'PAINS' %}
+            <span class="badge rounded-pill bg-danger"><small>{{tag.name}}</small></span>
+            {% elif tag.name == 'MCF' %}
+            <span class="badge rounded-pill bg-dark"><small>{{tag.name}}</small></span>
+            {% endif %}
             {% empty %}
             <span class="badge rounded-pill bg-light"><small></small></span>
           {% endfor %}
