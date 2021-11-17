@@ -122,8 +122,13 @@ def apply_filter(molecules, profile, filter_names, smiles):
     molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
     if smiles is not None:
         p = Chem.MolFromSmiles(smiles)
+        filtered_molecules = []
         if p:
-            molecules = [m for m in molecules if Chem.MolFromSmiles(m.smiles).HasSubstructMatch(p)]
+            for mol in molecules:
+                mol_rdkit = Chem.MolFromSmiles(mol.smiles)
+                if mol_rdkit is not None and mol_rdkit.HasSubstructMatch(p):
+                    filtered_molecules.append(mol)
+        molecules = filtered_molecules
     return molecules
 
 
