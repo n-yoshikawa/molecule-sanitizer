@@ -1,5 +1,10 @@
 {% extends "app/base.html" %}
 {% block title %}Sanitize It Yourself{% endblock title %}
+{% block meta %}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Sanitize It Yourself">
+<meta name="twitter:description" content="">
+{% endblock %}
 {% block main %}
 <main class="min-vh-100">
   {% if request.user.is_authenticated %}

@@ -1,6 +1,9 @@
 {% extends "app/base.html" %}
 {% block title %}Project Viewer - Sanitize It Yourself{% endblock title %}
 {% block meta %}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Sanitize It Yourself">
+<meta name="twitter:description" content="{{ project.name }}">
 {% endblock %}
 {% block main %}
 <section class="pt-3 container min-vh-100">
