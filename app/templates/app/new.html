@@ -11,11 +11,32 @@
         <div class="input-group mb-3">
           <input type="text" class="form-control" placeholder="Project Name" name="project_name">
         </div>
-        <textarea class="form-control" name="smiles_list" rows="25" placeholder="SMILES list&#13;&#13;Example:&#13;CC(C)(C)c1ccc2occ(CC(=O)Nc3ccccc3F)c2c1&#13;C[C@@H]1CC(Nc2cncc(-c3nncn3C)c2)C[C@@H](C)C1"></textarea>
+        <textarea class="form-control" id="input" name="smiles_list" rows="20" placeholder="SMILES list&#13;&#13;Example:&#13;CC(C)(C)c1ccc2occ(CC(=O)Nc3ccccc3F)c2c1&#13;C[C@@H]1CC(Nc2cncc(-c3nncn3C)c2)C[C@@H](C)C1"></textarea>
         <p class="mt-4"><strong>Please do not include any secret data.</strong> Your molecules are accessible from others by sharing a link to the project.</p>
-        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+        <div id="alert">Number of molecules: <span id="molecule_count">0</span> (limit: 10000)</div>
+        <button type="submit" class="btn btn-primary mt-3" id="submit">Submit</button>
     </form>
 </section>
 {% endif %}
 </main>
 {% endblock main %}
+{% block script %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+var molCount = $('#molecule_count');
+var button = $('#submit');
+var alert = $('#alert');
+$("#input").on('change keyup paste', function() {
+    newLines = $(this).val().split("\n").length;
+    molCount.text(newLines);
+    if (newLines > 10000) {
+        button.prop("disabled", true);
+        alert.addClass("alert alert-danger");
+    } else {
+        button.prop("disabled", false);
+        alert.removeClass("alert alert-danger");
+    }
+});
+</script>
+
+{% endblock %}
