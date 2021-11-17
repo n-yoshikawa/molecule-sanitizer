@@ -86,11 +86,6 @@ def process_project(project):
             continue
         inchikey = Chem.rdinchi.MolToInchiKey(mol_rdkit)
         mol.inchikey = inchikey
-        path = os.path.join(os.path.dirname(__file__), f'static/app/mol_images/{mol.uuid}.png')
-        d = rdMolDraw2D.MolDraw2DCairo(400, 300)
-        rdMolDraw2D.PrepareAndDrawMolecule(d, mol_rdkit)
-        d.FinishDrawing()
-        d.WriteDrawingText(path)
         # rule of five
         mol.molecular_weight = Descriptors.ExactMolWt(mol_rdkit)
         mol.logp = Descriptors.MolLogP(mol_rdkit)
@@ -279,6 +274,40 @@ def evaluation(request):
 def molecule(request, molecule_id):
     molecule = Molecule.objects.get(uuid=molecule_id)
     evaluations = None
+    pains = []
+    # Generate molecule image
+    path = os.path.join(os.path.dirname(__file__), f'static/app/mol_images/{molecule.uuid}.png')
+    if not os.path.exists(path):
+        mol_rdkit = Chem.MolFromSmiles(molecule.smiles)
+        if mol_rdkit is not None:
+            d = rdMolDraw2D.MolDraw2DCairo(400, 300)
+            rdMolDraw2D.PrepareAndDrawMolecule(d, mol_rdkit)
+            d.FinishDrawing()
+            d.WriteDrawingText(path)
+
+    # Generate PAINS filter images
+    if molecule.tags.filter(name='PAINS'):
+        params = FilterCatalogParams()
+        params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
+        pains_filter = FilterCatalog.FilterCatalog(params)
+        mol_rdkit = Chem.MolFromSmiles(molecule.smiles)
+        matches = pains_filter.GetMatches(mol_rdkit)
+        for i, match in enumerate(matches):
+            hatoms = [x[1] for x in match.GetFilterMatches(mol_rdkit)[0].atomPairs]
+            hbonds = []
+            for bond in mol_rdkit.GetBonds():
+                a1 = bond.GetBeginAtomIdx()
+                a2 = bond.GetEndAtomIdx()
+                if a1 in hatoms and a2 in hatoms:
+                    hbonds.append(bond.GetIdx())
+            path = os.path.join(os.path.dirname(__file__), f'static/app/mol_images/{molecule.uuid}-pains-{i}.png')
+            d = rdMolDraw2D.MolDraw2DCairo(400, 300)
+            rdMolDraw2D.PrepareAndDrawMolecule(d, mol_rdkit, highlightAtoms=hatoms, highlightBonds=hbonds)
+            d.FinishDrawing()
+            d.WriteDrawingText(path)
+            pains.append(i)
+
+    # Generate evaluation table
     if molecule.evaluation.all() is not None:
         likes = molecule.evaluation.filter(evaluation_type='Like')
         dislikes = molecule.evaluation.filter(evaluation_type='DisLike')
@@ -294,27 +323,6 @@ def molecule(request, molecule_id):
             return username
         for like, dislike in itertools.zip_longest(likes, dislikes):
             evaluations.append((get_name(like), get_name(dislike)))
-    if molecule.tags.filter(name='PAINS'):
-        params = FilterCatalogParams()
-        params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
-        pains = FilterCatalog.FilterCatalog(params)
-        mol_rdkit = Chem.MolFromSmiles(molecule.smiles)
-        matches = pains.GetMatches(mol_rdkit)
-        pains = []
-        for i, match in enumerate(matches):
-            hatoms = [x[1] for x in match.GetFilterMatches(mol_rdkit)[0].atomPairs]
-            hbonds = []
-            for bond in mol_rdkit.GetBonds():
-                a1 = bond.GetBeginAtomIdx()
-                a2 = bond.GetEndAtomIdx()
-                if a1 in hatoms and a2 in hatoms:
-                    hbonds.append(bond.GetIdx())
-            path = os.path.join(os.path.dirname(__file__), f'static/app/mol_images/{molecule.uuid}-pains-{i}.png')
-            d = rdMolDraw2D.MolDraw2DCairo(400, 300)
-            rdMolDraw2D.PrepareAndDrawMolecule(d, mol_rdkit, highlightAtoms=hatoms, highlightBonds=hbonds)
-            d.FinishDrawing()
-            d.WriteDrawingText(path)
-            pains.append(i)
         return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations,
                                                     'pains': pains})
     return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations})

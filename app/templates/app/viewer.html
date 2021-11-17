@@ -1,9 +1,8 @@
 {% extends "app/base.html" %}
 {% block title %}Project Viewer - Sanitize It Yourself{% endblock title %}
+{% block meta %}
+{% endblock %}
 {% block main %}
-{% if smiles %}
-<script type="text/javascript" language="javascript" src="/static/app/jsme/jsme.nocache.js"></script>
-{% endif %}
 <section class="pt-3 container min-vh-100">
   <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">Molecule Viewer<small class="fw-light font-sm"> ― {{ project.name }}</small></h1>
 </h1>
@@ -39,8 +38,8 @@
   {% endif %}
   </div>
   {% if smiles is not None %}
-  <p>Searching Substructure:</p>
-  <div id="jsme_container"></div>
+  <h3 class="h5 mt-4">Searching Substructure:</h3>
+  <canvas id="substructure" width="200"></canvas>
   {% endif %}
   <div class="mt-4">
       <button class="btn btn-danger" id="dislike_all">&#x1f44e; to all</button>
@@ -69,7 +68,9 @@
         {% else %}
 
        <a href="{% url 'molecule' molecule.uuid %}">
-        <div class="ratio ratio-4x3"><img src="{% static 'app/mol_images/'%}{{ molecule.uuid }}.png"></div>
+        <div class="ratio ratio-4x3">
+            <canvas class="mol_images" width="400" height="300">{{ molecule.smiles }}</canvas>
+        </div>
        </a>
         {% endif %}
         <div class="card-body">
@@ -137,17 +138,32 @@
 </section>
 </main>
 {% endblock main %}
-
 {% block script %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@rdkit/rdkit/Code/MinimalLib/dist/RDKit_minimal.js"></script>
 <script>
-    {% if smiles %}
-    function jsmeOnLoad() {
-        jsmeApplet = new JSApplet.JSME("jsme_container", "200px", "200px", {
-            "options": "depict", "smiles": "{{ smiles }}"
-        });
-    }
-    {% endif %}
+  onRuntimeInitialized: initRDKitModule().then(function (instance) {
+      RDKitModule = instance;
+      {% if smiles %}
+      var smiles = "{{ smiles }}";
+      var ss_mol = RDKitModule.get_mol(smiles);
+      var canvas = document.getElementById("substructure");
+      ss_mol.draw_to_canvas(canvas, -1, -1);
+      var qmol = RDKitModule.get_qmol(smiles)
+      $('.mol_images').each(function() {
+          var mol = RDKitModule.get_mol($(this).text());
+          var mdetails = mol.get_substruct_match(qmol);
+          mol.draw_to_canvas_with_highlights($(this)[0], mdetails);
+      });
+      {% else %}
+      $('.mol_images').each(function() {
+          var mol = RDKitModule.get_mol($(this).text());
+          mol.draw_to_canvas($(this)[0], -1, -1);
+      });
+      {% endif %}
+  });
+</script>
+<script>
 function send_evaluation(type, action, molecule_id) {
     var is_success = false;
     $.ajax({
