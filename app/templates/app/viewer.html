@@ -51,6 +51,7 @@
       <a href="{% url 'export' project.id %}{% if url_params %}?{{ url_params }}{% endif %}" class="btn btn-secondary" download="{{ project.name }}.smi">Export</a>
   </div>
   <hr class="mt-4 mb-5">
+  <p id="loading" class="lead">Rendering molecules...</p>
   {% if not mol_info %}
   <p>No molecule is found.</p>
   {% endif %}
@@ -163,6 +164,7 @@
           var mol = RDKitModule.get_mol($(this).text());
           mol.draw_to_canvas($(this)[0], -1, -1);
       });
+      $('#loading').hide();
       {% endif %}
   });
 </script>
