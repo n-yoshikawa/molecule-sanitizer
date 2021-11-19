@@ -55,7 +55,7 @@
   <p>No molecule is found.</p>
   {% endif %}
   {% load static %}
-  <div class="row row-cols-3 row-cols-lg-6 g-2">
+  <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-2">
   {% for molecule, liked, disliked in mol_info %}
     <div class="col">
       <div class="card">
@@ -145,7 +145,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@rdkit/rdkit/Code/MinimalLib/dist/RDKit_minimal.js"></script>
 <script>
-  onRuntimeInitialized: initRDKitModule().then(function (instance) {
+  window.initRDKitModule().then(function (instance) {
       RDKitModule = instance;
       {% if smiles %}
       var smiles = "{{ smiles }}";
