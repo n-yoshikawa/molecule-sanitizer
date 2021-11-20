@@ -140,8 +140,8 @@ def apply_filter(project, profile, filter_names, smiles, neighbor):
         molecules = filtered
     if neighbor:
         tree = AnnoyIndex(167, 'angular')
-        tree.load(os.path.join(os.path.split(__file__)[0], 'trees/{project.id}.ann'))
-        nn = tree.get_nns_by_item(int(neighbor), min(11, len(molecules)))[1:]
+        tree.load(os.path.join(os.path.split(__file__)[0], f'trees/{project.id}.ann'))
+        nn = tree.get_nns_by_item(int(neighbor), min(13, len(molecules)))[1:]
         filtered = []
         for mol in molecules:
             if mol.pk in nn:
