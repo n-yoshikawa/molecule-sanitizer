@@ -10,6 +10,7 @@
   <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">Molecule Viewer<small class="fw-light font-sm"> ― {{ project.name }}</small></h1>
 </h1>
   {% if project.is_ready %}
+  {% if n_smiles is None %}
   <h2 class="h4">Filter</h2>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox1" name="filter" value="Ro5" {% if 'Ro5' in filter_names %}checked{% endif %}>
@@ -40,9 +41,15 @@
       <label class="form-check-label" for="inlineCheckbox6">Substructure <code>{{ smiles }}</code></label>
   {% endif %}
   </div>
+  {% endif %}
   {% if smiles is not None %}
   <h3 class="h5 mt-4">Searching Substructure:</h3>
   <canvas id="substructure" width="200"></canvas>
+  {% endif %}
+  {% if n_smiles is not None %}
+  <h3 class="h5 mt-4">Nearest neighbor of</h3>
+  <canvas id="substructure" width="200"></canvas>
+  <div><a href="{% url 'viewer' project.id %}">Go to project home</a></div>
   {% endif %}
   <div class="mt-4">
       <button class="btn btn-danger" id="dislike_all">&#x1f44e; to all</button>
@@ -65,6 +72,7 @@
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
             <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
             <li><a class="dropdown-item" href="{% url 'search' project.id %}?smiles={{ molecule.smiles|urlencode }}">Substructure Search</a></li>
+            <li><a class="dropdown-item" href="{% url 'viewer' project.id %}?neighbor={{ molecule.pk }}">Nearest Neighbor Search</a></li>
         </ul>
       </div>
         {% if molecule.inchikey == "" %}
@@ -160,6 +168,12 @@
           mol.draw_to_canvas_with_highlights($(this)[0], mdetails);
       });
       {% else %}
+      {% if n_smiles %}
+      var smiles = "{{ n_smiles }}";
+      var ss_mol = RDKitModule.get_mol(smiles);
+      var canvas = document.getElementById("substructure");
+      ss_mol.draw_to_canvas(canvas, -1, -1);
+      {% endif %}
       $('.mol_images').each(function() {
           var mol = RDKitModule.get_mol($(this).text());
           mol.draw_to_canvas($(this)[0], -1, -1);
@@ -264,6 +278,7 @@ $(document).ready(function() {
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
                 'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             dataType: 'json',
@@ -282,6 +297,7 @@ $(document).ready(function() {
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
                 'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             dataType: 'json',
@@ -300,6 +316,7 @@ $(document).ready(function() {
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
                 'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             dataType: 'json',

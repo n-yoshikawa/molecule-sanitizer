@@ -9,13 +9,15 @@ from .models import UserProfile, Project, Molecule, Evaluation, Tag
 import os
 import threading
 from rdkit import Chem
-from rdkit.Chem import Descriptors, Draw
+from rdkit.Chem import Descriptors, Draw, MACCSkeys
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem import FilterCatalog
 from rdkit.Chem.FilterCatalog import FilterCatalogParams
-import pandas as pd
 import urllib.parse
 import itertools
+from annoy import AnnoyIndex
+import pandas as pd
+import numpy as np
 
 def create_new_user(user):
     profile = UserProfile.objects.create(user=user)
@@ -77,6 +79,7 @@ def process_project(project):
     _base_dir = os.path.split(__file__)[0]
     _mcf_csv = pd.read_csv(os.path.join(_base_dir, 'mcf.csv'))
     mcf_list = [Chem.MolFromSmarts(x) for x in _mcf_csv['smarts'].values]
+    tree = AnnoyIndex(167, 'angular')
     for smiles in smiles_list.splitlines():
         mol = Molecule.objects.create(project=project)
         mol.smiles = smiles
@@ -99,11 +102,17 @@ def process_project(project):
         h_mol = Chem.AddHs(mol_rdkit)
         if any(h_mol.HasSubstructMatch(smarts) for smarts in mcf_list):
             mol.tags.add(mcf_tag)
+        maccs = MACCSkeys.GenMACCSKeys(mol_rdkit)
+        v = np.fromiter(map(int, maccs), dtype=np.uint8)
+        tree.add_item(mol.pk, v)
         mol.save()
+    tree.build(10)
+    tree.save(os.path.join(_base_dir, 'trees/{project.id}.ann'))
     project.is_ready = True
     project.save()
 
-def apply_filter(molecules, profile, filter_names, smiles):
+def apply_filter(project, profile, filter_names, smiles, neighbor):
+    molecules = Molecule.objects.filter(project=project)
     if not molecules:
         return molecules
     if filter_names:
@@ -122,13 +131,22 @@ def apply_filter(molecules, profile, filter_names, smiles):
     molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
     if smiles is not None:
         p = Chem.MolFromSmiles(smiles)
-        filtered_molecules = []
+        filtered = []
         if p:
             for mol in molecules:
                 mol_rdkit = Chem.MolFromSmiles(mol.smiles)
                 if mol_rdkit is not None and mol_rdkit.HasSubstructMatch(p):
-                    filtered_molecules.append(mol)
-        molecules = filtered_molecules
+                    filtered.append(mol)
+        molecules = filtered
+    if neighbor:
+        tree = AnnoyIndex(167, 'angular')
+        tree.load(os.path.join(os.path.split(__file__)[0], 'trees/{project.id}.ann'))
+        nn = tree.get_nns_by_item(int(neighbor), min(11, len(molecules)))[1:]
+        filtered = []
+        for mol in molecules:
+            if mol.pk in nn:
+                filtered.append(mol)
+        molecules = filtered
     return molecules
 
 
@@ -136,10 +154,10 @@ def viewer(request, project_id):
     project = Project.objects.get(id=project_id)
     n = 100
     if project.is_ready:
-        molecules = Molecule.objects.filter(project=project)
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
         smiles = request.GET.get('smiles')
+        neighbor = request.GET.get('neighbor')
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
@@ -148,7 +166,7 @@ def viewer(request, project_id):
                 profile = UserProfile.objects.get(user=None)
             except:
                 profile = UserProfile.objects.create(user=None)
-        molecules = apply_filter(molecules, profile, filter_names, smiles)
+        molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
         filter_names_url = None
         if filter_names:
             filter_names_url = filter_names.rstrip()
@@ -170,16 +188,25 @@ def viewer(request, project_id):
         url_params = None
         if filter_names_url and smiles:
             url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&smiles={urllib.parse.quote_plus(smiles)}'
+        elif filter_names_url and neighbor:
+            url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&neighbor={neighbor}'
         elif filter_names_url:
             url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}'
         elif smiles:
             url_params = f'smiles={urllib.parse.quote_plus(smiles)}'
+        elif neighbor:
+            url_params = f'neighbor={neighbor}'
+        n_smiles = None
+        if neighbor:
+            n_mol = Molecule.objects.get(pk=int(neighbor))
+            n_smiles = n_mol.smiles
         return render(request,'app/viewer.html', 
                    {'project': project, 'mol_info': mol_info, 'project_id': project_id,
                     'filter_names': filter_names, 'filter_names_url': filter_names_url, 
                     'pages': pages, 'current_page': page, 'prev_page': page-1 if page != 1 else None,
                     'next_page': page+1 if pages and page != pages[-1] else None,
-                    'smiles': smiles, 'url_params': url_params})
+                    'smiles': smiles, 'neighbor': neighbor, 'n_smiles': n_smiles,
+                    'url_params': url_params})
     else:
         return render(request,'app/viewer.html', {'project': project})
 
@@ -187,16 +214,16 @@ def viewer(request, project_id):
 def export(request, project_id):
     project = Project.objects.get(id=project_id)
     if project.is_ready:
-        molecules = Molecule.objects.filter(project=project)
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
         smiles = request.GET.get('smiles')
+        neighbor = request.GET.get('neighbor')
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
             profile = UserProfile.objects.get(user=None)
-        molecules = apply_filter(molecules, profile, filter_names, smiles)
+        molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
         return HttpResponse("\n".join([mol.smiles for mol in molecules]))
     else:
         return HttpResponse("")
@@ -226,10 +253,12 @@ def evaluation(request):
             smiles = request.POST.get('smiles')
             if smiles == "":
                 smiles = None
+            neighbor = request.POST.get('neighbor')
+            if neighbor == "":
+                neighbor = None
             project_id = request.POST.get('project_id')
             project = Project.objects.get(id=project_id)
-            molecules = Molecule.objects.filter(project=project)
-            molecules = apply_filter(molecules, profile, filter_names, smiles)
+            molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
             for molecule in molecules:
                 with transaction.atomic():
                     try:
