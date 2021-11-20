@@ -107,7 +107,7 @@ def process_project(project):
         tree.add_item(mol.pk, v)
         mol.save()
     tree.build(10)
-    tree.save(os.path.join(_base_dir, 'trees/{project.id}.ann'))
+    tree.save(os.path.join(_base_dir, f'trees/{project.id}.ann'))
     project.is_ready = True
     project.save()
 
