@@ -111,7 +111,7 @@ def process_project(project):
     project.is_ready = True
     project.save()
 
-def apply_filter(project, profile, filter_names, smiles, neighbor):
+def apply_filter(project, profile, filter_names, smarts, neighbor):
     molecules = Molecule.objects.filter(project=project)
     if not molecules:
         return molecules
@@ -129,8 +129,8 @@ def apply_filter(project, profile, filter_names, smiles, neighbor):
                 molecules = molecules.filter(evaluation=evaluation)
     # Reorder molecules so that invalid molecules comes later
     molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
-    if smiles is not None:
-        p = Chem.MolFromSmiles(smiles)
+    if smarts is not None:
+        p = Chem.MolFromSmarts(smarts)
         filtered = []
         if p:
             for mol in molecules:
@@ -156,7 +156,7 @@ def viewer(request, project_id):
     if project.is_ready:
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
-        smiles = request.GET.get('smiles')
+        smarts = request.GET.get('smarts')
         neighbor = request.GET.get('neighbor')
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
@@ -166,7 +166,7 @@ def viewer(request, project_id):
                 profile = UserProfile.objects.get(user=None)
             except:
                 profile = UserProfile.objects.create(user=None)
-        molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
+        molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
         filter_names_url = None
         if filter_names:
             filter_names_url = filter_names.rstrip()
@@ -186,14 +186,14 @@ def viewer(request, project_id):
             disliked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='DisLike')) > 0 else False
             mol_info.append((molecule, liked, disliked))
         url_params = None
-        if filter_names_url and smiles:
-            url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&smiles={urllib.parse.quote_plus(smiles)}'
+        if filter_names_url and smarts:
+            url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&smarts={urllib.parse.quote_plus(smarts)}'
         elif filter_names_url and neighbor:
             url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&neighbor={neighbor}'
         elif filter_names_url:
             url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}'
-        elif smiles:
-            url_params = f'smiles={urllib.parse.quote_plus(smiles)}'
+        elif smarts:
+            url_params = f'smarts={urllib.parse.quote_plus(smarts)}'
         elif neighbor:
             url_params = f'neighbor={neighbor}'
         n_smiles = None
@@ -205,7 +205,7 @@ def viewer(request, project_id):
                     'filter_names': filter_names, 'filter_names_url': filter_names_url, 
                     'pages': pages, 'current_page': page, 'prev_page': page-1 if page != 1 else None,
                     'next_page': page+1 if pages and page != pages[-1] else None,
-                    'smiles': smiles, 'neighbor': neighbor, 'n_smiles': n_smiles,
+                    'smarts': smarts, 'neighbor': neighbor, 'n_smiles': n_smiles,
                     'url_params': url_params})
     else:
         return render(request,'app/viewer.html', {'project': project})
@@ -216,14 +216,14 @@ def export(request, project_id):
     if project.is_ready:
         page = int(request.GET.get('page', default='1'))
         filter_names = request.GET.get('filter')
-        smiles = request.GET.get('smiles')
+        smarts = request.GET.get('smarts')
         neighbor = request.GET.get('neighbor')
         if request.user.is_authenticated:
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
             profile = UserProfile.objects.get(user=None)
-        molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
+        molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
         return HttpResponse("\n".join([mol.smiles for mol in molecules]))
     else:
         return HttpResponse("")
@@ -250,15 +250,15 @@ def evaluation(request):
             filter_names = request.POST.get('filter')
             if filter_names == "":
                 filter_names = None
-            smiles = request.POST.get('smiles')
-            if smiles == "":
-                smiles = None
+            smarts = request.POST.get('smarts')
+            if smarts == "":
+                smarts = None
             neighbor = request.POST.get('neighbor')
             if neighbor == "":
                 neighbor = None
             project_id = request.POST.get('project_id')
             project = Project.objects.get(id=project_id)
-            molecules = apply_filter(project, profile, filter_names, smiles, neighbor)
+            molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
             for molecule in molecules:
                 with transaction.atomic():
                     try:

@@ -33,16 +33,16 @@
     <label class="form-check-label" for="inlineCheckbox5">&#x1f44d;</label>
   </div>
   <div class="form-check form-check-inline">
-  {% if smiles is None %}
-  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smiles" value="{{ smiles|urlencode}}" disabled>
+  {% if smarts is None %}
+  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smarts" value="{{ smarts|urlencode}}" disabled>
       <a href="{% url 'search' project.id %}">Substructure search</a>
   {% else %}
-  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smiles" value="{{ smiles|urlencode }}" checked>
-      <label class="form-check-label" for="inlineCheckbox6">Substructure <code>{{ smiles }}</code></label>
+  <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smarts" value="{{ smarts|urlencode }}" checked>
+      <label class="form-check-label" for="inlineCheckbox6">Substructure <code>{{ smarts }}</code></label>
   {% endif %}
   </div>
   {% endif %}
-  {% if smiles is not None %}
+  {% if smarts is not None %}
   <h3 class="h5 mt-4">Searching Substructure:</h3>
   <canvas id="substructure" width="200"></canvas>
   {% endif %}
@@ -156,12 +156,12 @@
 <script>
   window.initRDKitModule().then(function (instance) {
       RDKitModule = instance;
-      {% if smiles %}
-      var smiles = "{{ smiles }}";
-      var ss_mol = RDKitModule.get_mol(smiles);
+      {% if smarts %}
+      var smarts = "{{ smarts }}";
+      var ss_mol = RDKitModule.get_mol(smarts);
       var canvas = document.getElementById("substructure");
       ss_mol.draw_to_canvas(canvas, -1, -1);
-      var qmol = RDKitModule.get_qmol(smiles)
+      var qmol = RDKitModule.get_qmol(smarts)
       $('.mol_images').each(function() {
           var mol = RDKitModule.get_mol($(this).text());
           var mdetails = mol.get_substruct_match(qmol);
@@ -277,7 +277,7 @@ $(document).ready(function() {
                 'action': 'all',
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
-                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'smarts': {% if smarts %}'{{ smarts }}'{% else %}null{% endif %},
                 'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
@@ -296,7 +296,7 @@ $(document).ready(function() {
                 'action': 'all',
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
-                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'smarts': {% if smarts %}'{{ smarts }}'{% else %}null{% endif %},
                 'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
@@ -315,7 +315,7 @@ $(document).ready(function() {
                 'action': 'all',
                 'project_id': '{{ project.id }}',
                 'filter': {% if filter_names_url %}'{{ filter_names_url }}'{% else %}null{% endif %},
-                'smiles': {% if smiles %}'{{ smiles }}'{% else %}null{% endif %},
+                'smarts': {% if smarts %}'{{ smarts }}'{% else %}null{% endif %},
                 'neighbor': {% if neighbor %}'{{ neighbor }}'{% else %}null{% endif %},
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
@@ -331,21 +331,21 @@ $(document).ready(function() {
             checkboxValues.push($(elem).val());
         });
         if (checkboxValues.length == 0) {
-            {% if smiles %}
-            location.href = "{% url 'viewer' project.id %}?smiles=" + encodeURIComponent("{{ smiles }}");
+            {% if smarts %}
+            location.href = "{% url 'viewer' project.id %}?smarts=" + encodeURIComponent("{{ smarts }}");
             {% else %}
             location.href = "{% url 'viewer' project.id %}";
             {% endif %}
         }
         else {
-            {% if smiles %}
-            location.href = "{% url 'viewer' project.id %}?smiles=" + encodeURIComponent("{{ smiles }}") + "&filter=" + checkboxValues.join('%2B');
+            {% if smarts %}
+            location.href = "{% url 'viewer' project.id %}?smarts=" + encodeURIComponent("{{ smarts }}") + "&filter=" + checkboxValues.join('%2B');
             {% else %}
             location.href = "{% url 'viewer' project.id %}?filter=" + checkboxValues.join('%2B');
             {% endif %}
         }
     });
-    $('input[type=checkbox][name=smiles]').change(function() {
+    $('input[type=checkbox][name=smarts]').change(function() {
         var checkboxValues = [];
         $('input[type="checkbox"][name=filter]:checked').each(function(index, elem) {
             checkboxValues.push($(elem).val());
