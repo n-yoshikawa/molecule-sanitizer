@@ -130,14 +130,17 @@ def apply_filter(project, profile, filter_names, smarts, neighbor):
     # Reorder molecules so that invalid molecules comes later
     molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
     if smarts is not None:
-        p = Chem.MolFromSmarts(smarts)
-        filtered = []
-        if p:
-            for mol in molecules:
-                mol_rdkit = Chem.MolFromSmiles(mol.smiles)
-                if mol_rdkit is not None and mol_rdkit.HasSubstructMatch(p):
-                    filtered.append(mol)
-        molecules = filtered
+        try:
+            p = Chem.MolFromSmarts(smarts)
+            filtered = []
+            if p:
+                for mol in molecules:
+                    mol_rdkit = Chem.MolFromSmiles(mol.smiles)
+                    if mol_rdkit is not None and mol_rdkit.HasSubstructMatch(p):
+                        filtered.append(mol)
+            molecules = filtered
+        except:
+            molecules = []
     if neighbor:
         tree = AnnoyIndex(167, 'angular')
         tree.load(os.path.join(os.path.split(__file__)[0], f'trees/{project.id}.ann'))
@@ -200,13 +203,20 @@ def viewer(request, project_id):
         if neighbor:
             n_mol = Molecule.objects.get(pk=int(neighbor))
             n_smiles = n_mol.smiles
+
+        validSmarts = True
+        if smarts:
+            p = Chem.MolFromSmarts(smarts)
+            if p is None:
+                validSmarts = False
+
         return render(request,'app/viewer.html', 
                    {'project': project, 'mol_info': mol_info, 'project_id': project_id,
                     'filter_names': filter_names, 'filter_names_url': filter_names_url, 
                     'pages': pages, 'current_page': page, 'prev_page': page-1 if page != 1 else None,
                     'next_page': page+1 if pages and page != pages[-1] else None,
                     'smarts': smarts, 'neighbor': neighbor, 'n_smiles': n_smiles,
-                    'url_params': url_params})
+                    'validSmarts': validSmarts, 'url_params': url_params})
     else:
         return render(request,'app/viewer.html', {'project': project})
 
