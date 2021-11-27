@@ -111,13 +111,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
-
-SOCIAL_AUTH_TWITTER_KEY = 'xxxxxxxxxxxxxxxxxxxxxxxxx'
-SOCIAL_AUTH_TWITTER_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-SOCIAL_AUTH_ORCID_KEY = ''
-SOCIAL_AUTH_ORCID_SECRET = ''
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
