@@ -360,6 +360,8 @@ def molecule(request, molecule_id):
             if evaluation is None:
                 return None
             user = evaluation.user.user
+            if user is None:
+                return 'Guest User'
             if user.provider == 'twitter':
                 username = '@' + user.user.username
             else:
