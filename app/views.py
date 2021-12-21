@@ -40,7 +40,10 @@ def index(request):
         return render(request,'app/index.html', {'user': user, 'username': username, 
                                                  'projects': projects})
     else:
-        return render(request,'app/index.html')
+        mol_count = Molecule.objects.count()
+        project_count = Project.objects.count()
+        return render(request,'app/index.html', {'mol_count': mol_count, 
+                                                 'project_count': project_count})
 
 @login_required
 def new(request):
