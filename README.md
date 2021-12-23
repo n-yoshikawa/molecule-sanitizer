@@ -14,9 +14,7 @@ docker build -t sanitizer .
 docker run -p 8000:8000 -it sanitizer /bin/bash
 ```
 
-3. Edit settings. You need to have keys and tokens for [Twitter API](https://developer.twitter.com/en/docs/authentication/oauth-1-0a) and [ORCID Public API](https://info.orcid.org/documentation/features/public-api/#easy-faq-2606) to run this application.
-
-Callback URI should be set to `http://127.0.0.1:8000/complete/twitter/` if you run the server locally.
+3. Edit settings. You need to have keys and tokens for [Twitter API](https://developer.twitter.com/en/docs/authentication/oauth-1-0a) and [ORCID Public API](https://info.orcid.org/documentation/features/public-api/#easy-faq-2606) to run this application.  Callback URI should be set to `http://127.0.0.1:8000/complete/twitter/` if you run the server locally. If you don't need user authentication, consider using [local version](https://github.com/n-yoshikawa/molecule-sanitizer/tree/local) to avoid these settings.
 
 ```
 cd molecule-sanitizer/
