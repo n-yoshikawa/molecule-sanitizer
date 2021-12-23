@@ -2,7 +2,6 @@
 {% block title %}Sanitize It Yourself{% endblock title %}
 {% block main %}
 <main class="min-vh-100">
-{% if request.user.is_authenticated %}
 <section class="container min-vh-100">
     <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">New Project</small></h1>
     {% if error %}<div class="alert alert-danger" role="alert">Error — {{ error }}</div>{% endif %}
@@ -17,7 +16,6 @@
         <button type="submit" class="btn btn-primary mt-3" id="submit">Submit</button>
     </form>
 </section>
-{% endif %}
 </main>
 {% endblock main %}
 {% block script %}

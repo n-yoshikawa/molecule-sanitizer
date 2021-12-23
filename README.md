@@ -1,7 +1,8 @@
-# Sanitize It Yourself
+# Sanitize It Yourself (local version)
 Source code for https://sanitizer.chemical.space/
 
 ## Usage
+### Docker
 We recommend to use Docker.
 
 1. Install Docker
@@ -14,9 +15,7 @@ docker build -t sanitizer .
 docker run -p 8000:8000 -it sanitizer /bin/bash
 ```
 
-3. Edit settings. You need to have keys and tokens for [Twitter API](https://developer.twitter.com/en/docs/authentication/oauth-1-0a) and [ORCID Public API](https://info.orcid.org/documentation/features/public-api/#easy-faq-2606) to run this application.
-
-Callback URI should be set to `http://127.0.0.1:8000/complete/twitter/` if you run the server locally.
+3. Edit settings. 
 
 ```
 cd molecule-sanitizer/
@@ -33,3 +32,9 @@ python3 manage.py runserver 0.0.0.0:8000
 ```
 
 You can access `http://127.0.0.1:8000/` in your browser.
+
+### Without Docker
+If you don't want to use Docker, you can install dependencies by yourself.
+```
+pip install Django social-auth-app-django rdkit-pypi pandas annoy
+```

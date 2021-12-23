@@ -26,26 +26,13 @@ def create_new_user(user):
     return profile
 
 def index(request):
-    if request.user.is_authenticated:
-        user = UserSocialAuth.objects.get(user_id=request.user.id)
-        if user.provider == 'twitter':
-            username = '@' + user.user.username
-        else:
-            username = user.user.get_full_name()
-        try:
-            profile = UserProfile.objects.get(user=user)
-        except UserProfile.DoesNotExist:
-            profile = create_new_user(user)
-        projects = Project.objects.filter(owner=profile)
-        return render(request,'app/index.html', {'user': user, 'username': username, 
-                                                 'projects': projects})
-    else:
-        mol_count = Molecule.objects.count()
-        project_count = Project.objects.count()
-        return render(request,'app/index.html', {'mol_count': mol_count, 
-                                                 'project_count': project_count})
+    try:
+        profile = UserProfile.objects.get(user=None)
+    except UserProfile.DoesNotExist:
+        profile = create_new_user(None)
+    projects = Project.objects.filter(owner=profile)
+    return render(request,'app/index.html', {'username': 'Guest', 'projects': projects})
 
-@login_required
 def new(request):
     if request.method == 'POST':
         smiles_list = request.POST['smiles_list']
@@ -53,8 +40,7 @@ def new(request):
         if nlines > 10000:
             return render(request,'app/new.html', {'error': 'SMILES list is too long'})
         name = request.POST['project_name']
-        user = UserSocialAuth.objects.get(user_id=request.user.id)
-        profile = UserProfile.objects.get(user=user)
+        profile = UserProfile.objects.get(user=None)
         project = Project.objects.create(owner=profile, raw_text=smiles_list, name=name)
         thread = threading.Thread(target=process_project, args=(project,))
         thread.start()
@@ -164,14 +150,7 @@ def viewer(request, project_id):
         filter_names = request.GET.get('filter')
         smarts = request.GET.get('smarts')
         neighbor = request.GET.get('neighbor')
-        if request.user.is_authenticated:
-            user = UserSocialAuth.objects.get(user_id=request.user.id)
-            profile = UserProfile.objects.get(user=user)
-        else:
-            try:
-                profile = UserProfile.objects.get(user=None)
-            except:
-                profile = UserProfile.objects.create(user=None)
+        profile = UserProfile.objects.get(user=None)
         molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
         filter_names_url = None
         if filter_names:
@@ -231,11 +210,7 @@ def export(request, project_id):
         filter_names = request.GET.get('filter')
         smarts = request.GET.get('smarts')
         neighbor = request.GET.get('neighbor')
-        if request.user.is_authenticated:
-            user = UserSocialAuth.objects.get(user_id=request.user.id)
-            profile = UserProfile.objects.get(user=user)
-        else:
-            profile = UserProfile.objects.get(user=None)
+        profile = UserProfile.objects.get(user=None)
         molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
         return HttpResponse("\n".join([mol.smiles for mol in molecules]))
     else:
@@ -244,11 +219,7 @@ def export(request, project_id):
 def evaluation(request):
     if request.method == 'POST' and request.is_ajax():
         evaluation_type = request.POST.get('evaluation_type')
-        if request.user.is_authenticated:
-            user = UserSocialAuth.objects.get(user_id=request.user.id)
-            profile = UserProfile.objects.get(user=user)
-        else:
-            profile = UserProfile.objects.get(user=None)
+        profile = UserProfile.objects.get(user=None)
         try:
             like = Evaluation.objects.get(user=profile, evaluation_type='Like')
         except:
