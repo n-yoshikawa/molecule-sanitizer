@@ -91,6 +91,9 @@ def process_project(project):
             mol.save()
             continue
         inchikey = Chem.rdinchi.MolToInchiKey(mol_rdkit)
+        if inchikey == "":
+            mol.save()
+            continue
         mol.inchikey = inchikey
         # rule of five
         mol.molecular_weight = Descriptors.ExactMolWt(mol_rdkit)
