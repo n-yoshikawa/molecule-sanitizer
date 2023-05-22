@@ -11,6 +11,7 @@ urlpatterns = [
     path('export/<uuid:project_id>', views.export, name='export'),
     path('molecule/<uuid:molecule_id>', views.molecule, name='molecule'),
     path('evaluation/', views.evaluation, name='evaluation'),
+    path('evaluation_detail/', views.evaluation_detail, name='evaluation_detail'),
     path('rename_project', views.rename_project, name='rename_project'),
     path('remove_project', views.remove_project, name='remove_project'),
     path('logout/',

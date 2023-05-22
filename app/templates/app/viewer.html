@@ -68,7 +68,28 @@
     <div class="col">
       <div class="card">
       <div class="dropdown text-end">
-        <button class="btn btn-sm dropdown-toggle text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
+        <button class="btn btn-sm text-secondary" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true" data-bs-content='
+    <ul>
+        <li><div>Chemical stability or Reactivity</div>
+            &#x1f44e; <input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+        </li>
+        <li><div>Synthetic accessibility</div>
+            &#x1f44e; <input type="range" name="question2_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+        </li>
+        <li><div>Synthetic amenability to diverse derivatizations</div>
+            &#x1f44e; <input type="range" name="question3_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+        </li>
+        <li><div>Structural alerts</div>
+            &#x1f44e; <input type="range" name="question4_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+        </li>
+        <li><div>Potential for bioactivity</div>
+            &#x1f44e; <input type="range" name="question5_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+        </li>
+        <li><label>Specific comments (if any)</label><br><textarea id="freeform_{{molecule.pk}}"></textarea></li>
+    </ul>
+    <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-sm btn-light" value="Submit" onclick="eval_mol({{molecule.pk}})">
+'>Evaluate</button>
+        <button class="btn btn-sm dropdown-toggle dropdown-toggle-split text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
             <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
             <li><a class="dropdown-item" href="{% url 'search' project.id %}?smiles={{ molecule.smiles|urlencode }}">Substructure Search</a></li>
@@ -153,6 +174,55 @@
 {% block script %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@rdkit/rdkit/Code/MinimalLib/dist/RDKit_minimal.js"></script>
+<script>
+function eval_mol(molecule_id) {
+    console.log(molecule_id);
+    console.log($("input[name=question1_" + molecule_id + "]").val()); 
+    console.log($("input[name=question2_" + molecule_id + "]").val()); 
+    console.log($("input[name=question3_" + molecule_id + "]").val()); 
+    console.log($("input[name=question4_" + molecule_id + "]").val()); 
+    console.log($("input[name=question5_" + molecule_id + "]").val()); 
+    console.log($("#freeform_" + molecule_id).val()); 
+    $.ajax({
+        url: '{% url "evaluation_detail" %}',
+        type: 'POST',
+        data: {
+            'molecule_id': molecule_id,
+            'score1': $("input[name=question1_" + molecule_id + "]").val(),
+            'score2': $("input[name=question2_" + molecule_id + "]").val(),
+            'score3': $("input[name=question3_" + molecule_id + "]").val(),
+            'score4': $("input[name=question4_" + molecule_id + "]").val(),
+            'score5': $("input[name=question5_" + molecule_id + "]").val(),
+            'freeform': $("#freeform_" + molecule_id).val(),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        dataType: 'json',
+        success: function (data) {
+            console.log(data);
+            if (data.success) {
+                $("#submit_" + molecule_id).attr("value", "Done!");
+            } else {
+                $("#submit_" + molecule_id).attr("value", "Failed.");
+            }
+        }
+    }).fail(function() {
+        return false;
+    });
+    return true;
+}
+</script>
+<script>
+var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+  return new bootstrap.Popover(popoverTriggerEl)
+});
+var myDefaultAllowList = bootstrap.Tooltip.Default.allowList;
+myDefaultAllowList.form = ['name', 'onsubmit', 'action'];
+myDefaultAllowList.button = [];
+myDefaultAllowList.label = ['for'];
+myDefaultAllowList.input = ['type', 'name', 'autocomplete', 'checked', 'value', 'onclick', 'min', 'max', 'step']
+myDefaultAllowList.textarea = [];
+</script>
 <script>
   window.initRDKitModule().then(function (instance) {
       RDKitModule = instance;

@@ -4,7 +4,7 @@ from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from social_django.models import UserSocialAuth
-from .models import UserProfile, Project, Molecule, Evaluation, Tag
+from .models import UserProfile, Project, Molecule, Evaluation, Tag, EvaluationDetail
 
 import os
 import threading
@@ -320,6 +320,33 @@ def evaluation(request):
                              'dislike_count': molecule.dislike_count})
     else:
         return JsonResponse({'type': 'failure'})
+
+def evaluation_detail(request):
+    if request.method == 'POST' and request.is_ajax():
+        evaluation_type = request.POST.get('evaluation_type')
+        if request.user.is_authenticated:
+            user = UserSocialAuth.objects.get(user_id=request.user.id)
+            profile = UserProfile.objects.get(user=user)
+        else:
+            profile = UserProfile.objects.get(user=None)
+
+        molecule_id = request.POST.get('molecule_id')
+        print(request.POST)
+        print(request.POST.get('score1'))
+        molecule = Molecule.objects.get(id=molecule_id)
+        with transaction.atomic():
+            evaluation, _ = EvaluationDetail.objects.get_or_create(user=profile)
+            evaluation.score1 = request.POST.get('score1')
+            evaluation.score2 = request.POST.get('score2')
+            evaluation.score3 = request.POST.get('score3')
+            evaluation.score4 = request.POST.get('score4')
+            evaluation.score5 = request.POST.get('score5')
+            evaluation.save()
+            molecule.evaluation_detail.add(evaluation)
+            molecule.save()
+        return JsonResponse({'success': True})
+    else:
+        return JsonResponse({'success': False})
 
 def molecule(request, molecule_id):
     molecule = Molecule.objects.get(uuid=molecule_id)
