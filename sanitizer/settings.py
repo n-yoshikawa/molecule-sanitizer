@@ -25,8 +25,6 @@ SECRET_KEY = 'secret-example'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['example.com']
-
 
 # Application definition
 
@@ -106,6 +104,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = [
     'social_core.backends.twitter.TwitterOAuth',
+    'social_core.backends.github.GithubOAuth2',
     'social_core.backends.orcid.ORCIDOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 ]

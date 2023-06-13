@@ -40,8 +40,12 @@ def index(request):
         return render(request,'app/index.html', {'user': user, 'username': username, 
                                                  'projects': projects})
     else:
-        mol_count = Molecule.objects.count()
-        project_count = Project.objects.count()
+        try:
+            mol_count = Molecule.objects.count()
+            project_count = Project.objects.count()
+        except:
+            mol_count = 0
+            project_count = 0
         return render(request,'app/index.html', {'mol_count': mol_count, 
                                                  'project_count': project_count})
 
@@ -193,7 +197,13 @@ def viewer(request, project_id):
         for molecule in molecules:
             liked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='Like')) > 0 else False
             disliked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='DisLike')) > 0 else False
-            mol_info.append((molecule, liked, disliked))
+            evaluated = True if len(molecule.evaluation_detail.filter(user=profile)) > 0 else False
+            if len(molecule.evaluation_detail.filter(user=profile)) > 0:
+                evaluation = molecule.evaluation_detail.get(user=profile)
+            else:
+                evaluation = {"score1": 2, "score2": 2, "score3": 2, "score4": 2, "score5": 2, "free_form": ""}
+            mol_info.append((molecule, liked, disliked, evaluated, evaluation))
+
         url_params = None
         if filter_names_url and smarts:
             url_params = f'filter={urllib.parse.quote_plus(filter_names_url)}&smarts={urllib.parse.quote_plus(smarts)}'
@@ -341,6 +351,7 @@ def evaluation_detail(request):
             evaluation.score3 = request.POST.get('score3')
             evaluation.score4 = request.POST.get('score4')
             evaluation.score5 = request.POST.get('score5')
+            evaluation.free_form = request.POST.get('freeform')
             evaluation.save()
             molecule.evaluation_detail.add(evaluation)
             molecule.save()
@@ -351,6 +362,7 @@ def evaluation_detail(request):
 def molecule(request, molecule_id):
     molecule = Molecule.objects.get(uuid=molecule_id)
     evaluations = None
+    evaluation_details = None
     pains = []
     # Generate molecule image
     path = os.path.join(os.path.dirname(__file__), f'static/app/mol_images/{molecule.uuid}.png')
@@ -402,9 +414,15 @@ def molecule(request, molecule_id):
             return username
         for like, dislike in itertools.zip_longest(likes, dislikes):
             evaluations.append((get_name(like), get_name(dislike)))
-        return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations,
-                                                    'pains': pains})
-    return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations})
+    if molecule.evaluation_detail.all() is not None:
+        evaluation_details = []
+        for e in molecule.evaluation_detail.all():
+            username = e.user.user.user.get_full_name()
+            evaluation_details.append((username, e.score1, e.score2, e.score3, e.score4, e.score5, e.free_form))
+    return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations,
+                                                'evaluation_details': evaluation_details,
+                                                'pains': pains})
+    #return render(request,'app/molecule.html', {'molecule': molecule, 'evaluations': evaluations})
 
 def rename_project(request):
     if request.method == 'POST' and request.is_ajax():

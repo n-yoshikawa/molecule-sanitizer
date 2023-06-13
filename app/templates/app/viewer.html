@@ -64,31 +64,32 @@
   {% endif %}
   {% load static %}
   <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-2">
-  {% for molecule, liked, disliked in mol_info %}
+  {% for molecule, liked, disliked, evaluated, evaluation in mol_info %}
     <div class="col">
       <div class="card">
       <div class="dropdown text-end">
-        <button class="btn btn-sm text-secondary" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true" data-bs-content='
+	{% if request.user.is_authenticated %}
+        <button class="btn btn-sm text-secondary" id="evaluate_{{molecule.pk}}" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true" data-bs-content='
     <ul>
         <li><div>Chemical stability or Reactivity</div>
-            &#x1f44e; <input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+	&#x1f44e; <input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score1}}"> &#x1f44d;
         </li>
         <li><div>Synthetic accessibility</div>
-            &#x1f44e; <input type="range" name="question2_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+            &#x1f44e; <input type="range" name="question2_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score2}}"> &#x1f44d;
         </li>
         <li><div>Synthetic amenability to diverse derivatizations</div>
-            &#x1f44e; <input type="range" name="question3_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+            &#x1f44e; <input type="range" name="question3_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score3}}"> &#x1f44d;
         </li>
         <li><div>Structural alerts</div>
-            &#x1f44e; <input type="range" name="question4_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+            &#x1f44e; <input type="range" name="question4_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score4}}"> &#x1f44d;
         </li>
         <li><div>Potential for bioactivity</div>
-            &#x1f44e; <input type="range" name="question5_{{molecule.pk}}" min="1" max="3" step="1" value="2"> &#x1f44d;
+            &#x1f44e; <input type="range" name="question5_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score5}}"> &#x1f44d;
         </li>
-        <li><label>Specific comments (if any)</label><br><textarea id="freeform_{{molecule.pk}}"></textarea></li>
+	<li><label>Specific comments (if any)</label><br><textarea id="freeform_{{molecule.pk}}">{{evaluation.free_form}}</textarea></li>
     </ul>
     <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-sm btn-light" value="Submit" onclick="eval_mol({{molecule.pk}})">
-'>Evaluate</button>
+ '>Evaluate {% if evaluated %}&#9989;{% endif %}</button>{% endif %}
         <button class="btn btn-sm dropdown-toggle dropdown-toggle-split text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
             <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
@@ -201,6 +202,7 @@ function eval_mol(molecule_id) {
             console.log(data);
             if (data.success) {
                 $("#submit_" + molecule_id).attr("value", "Done!");
+		$("#evaluate_" + molecule_id).html("Evaluate &#9989");
             } else {
                 $("#submit_" + molecule_id).attr("value", "Failed.");
             }

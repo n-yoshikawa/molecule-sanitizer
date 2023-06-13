@@ -6,7 +6,7 @@
 <section class="container min-vh-100">
     <h1 class="h2 pt-3 pb-2 mb-3 border-bottom">New Project</small></h1>
     <p>Enter SMILES list (1 SMILES per line, up to 10000 lines)</p>
-    <form action="{% url 'create' %}" method="post">
+    <form action="{% url 'create' %}" method="post">{% csrf_token %}
         <textarea class="form-control" id="smiles_list" rows="25" placeholder="CC(C)(C)c1ccc2occ(CC(=O)Nc3ccccc3F)c2c1&#13;C[C@@H]1CC(Nc2cncc(-c3nncn3C)c2)C[C@@H](C)C1"></textarea>
         <button type="submit" class="btn btn-primary mt-3">Submit</button>
     </form>

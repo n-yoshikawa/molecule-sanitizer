@@ -52,10 +52,6 @@
         <td>{{ molecule.h_bond_acceptors }}</td>
       </tr>
 </table>
-<div class="text-center mt-5">
-    <a class="btn btn-primary" href="https://twitter.com/intent/tweet?url=https://sanitizer.chemical.space/molecule/{{ molecule.uuid }}"><i class="bi bi-twitter"></i> Tweet</a>
-<a class="btn btn-primary" href="https://twitter.com/intent/tweet?text=@retrosynthchan {{ molecule.smiles }}">Send to @retrosynthchan</a>
-</div>
 {% if evaluations %}
 <h2 class="h3 pt-5 pb-2 mb-3 border-bottom">Evaluations</h1>
 <table class="table table-bordered w-50 mx-auto mt-5">
@@ -67,6 +63,31 @@
   <tr>
       <td>{% if like is not None %}{{ like }}{% endif %}</th>
       <td>{% if dislike is not None %}{{ dislike }}{% endif %}</th>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if evaluation_details %}
+<h2 class="h3 pt-5 pb-2 mb-3 border-bottom">Detailed evaluations</h1>
+<table class="table table-bordered w-100 mx-auto mt-5">
+  <tr>
+      <th>Evaluator</th>
+      <th>Chemical stability or Reactivity</th>
+      <th>Synthetic accessibility</th>
+      <th>Synthetic amenability to diverse derivatizations</th>
+      <th>Structural alerts</th>
+      <th>Potential for bioactivity</th>
+      <th>Comments</th>
+  </tr>
+  {% for name, score1, score2, score3, score4, score5, free_form in evaluation_details %}
+  <tr>
+      <td>{{ name }}</th>
+      <td>{{ score1 }}</th>
+      <td>{{ score2 }}</th>
+      <td>{{ score3 }}</th>
+      <td>{{ score4 }}</th>
+      <td>{{ score5 }}</th>
+      <td>{{ free_form }}</th>
   </tr>
   {% endfor %}
 </table>
