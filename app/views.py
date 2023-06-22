@@ -4,7 +4,7 @@ from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from social_django.models import UserSocialAuth
-from .models import UserProfile, Project, Molecule, Evaluation, Tag, EvaluationDetail
+from .models import UserProfile, Project, Molecule, Evaluation, Tag, EvaluationDetail, Done
 
 import os
 import threading
@@ -89,7 +89,10 @@ def process_project(project):
     tree = AnnoyIndex(167, 'angular')
     for smiles in smiles_list.splitlines():
         mol = Molecule.objects.create(project=project)
-        mol.smiles = smiles
+        smiles_split = smiles.split()
+        mol.smiles = smiles_split[0]
+        if len(smiles_split) > 1:
+            mol.local_id = smiles_split[1]
         mol_rdkit = Chem.MolFromSmiles(smiles)
         if mol_rdkit is None:
             mol.save()
@@ -198,11 +201,13 @@ def viewer(request, project_id):
             liked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='Like')) > 0 else False
             disliked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='DisLike')) > 0 else False
             evaluated = True if len(molecule.evaluation_detail.filter(user=profile)) > 0 else False
+            done, _ = molecule.is_done.get_or_create(user=profile)
+            done = done.flag
             if len(molecule.evaluation_detail.filter(user=profile)) > 0:
                 evaluation = molecule.evaluation_detail.get(user=profile)
             else:
                 evaluation = {"score1": 2, "score2": 2, "score3": 2, "score4": 2, "score5": 2, "free_form": ""}
-            mol_info.append((molecule, liked, disliked, evaluated, evaluation))
+            mol_info.append((molecule, liked, disliked, evaluated, evaluation, done))
 
         url_params = None
         if filter_names_url and smarts:
@@ -344,8 +349,12 @@ def evaluation_detail(request):
         print(request.POST)
         print(request.POST.get('score1'))
         molecule = Molecule.objects.get(id=molecule_id)
+        if molecule.evaluation_detail.filter(user=profile):
+            evaluation = molecule.evaluation_detail.filter(user=profile)[0]
+        else:
+            evaluation = EvaluationDetail.objects.create(user=profile)
+            molecule.evaluation_detail.add(evaluation)
         with transaction.atomic():
-            evaluation, _ = EvaluationDetail.objects.get_or_create(user=profile)
             evaluation.score1 = request.POST.get('score1')
             evaluation.score2 = request.POST.get('score2')
             evaluation.score3 = request.POST.get('score3')
@@ -353,11 +362,39 @@ def evaluation_detail(request):
             evaluation.score5 = request.POST.get('score5')
             evaluation.free_form = request.POST.get('freeform')
             evaluation.save()
-            molecule.evaluation_detail.add(evaluation)
-            molecule.save()
         return JsonResponse({'success': True})
     else:
         return JsonResponse({'success': False})
+
+def done_molecule(request):
+    if request.method == 'POST' and request.is_ajax():
+        if request.user.is_authenticated:
+            user = UserSocialAuth.objects.get(user_id=request.user.id)
+            profile = UserProfile.objects.get(user=user)
+        else:
+            profile = UserProfile.objects.get(user=None)
+
+        molecule_id = request.POST.get('molecule_id')
+        print(request.POST)
+        molecule = Molecule.objects.get(id=molecule_id)
+
+        if not molecule.evaluation_detail.filter(user=profile):
+            return JsonResponse({'success': False, 'message': "You need to submit an evaluation!"})
+
+        if molecule.is_done.filter(user=profile):
+            done = molecule.is_done.filter(user=profile)[0]
+        else:
+            done = Done.objects.create(user=profile)
+            molecule.is_done.add(done)
+        with transaction.atomic():
+            if done.flag:
+                done.flag = False
+            else:
+                done.flag = True
+            done.save()
+        return JsonResponse({'success': True, 'done': done.flag})
+    else:
+        return JsonResponse({'success': False, 'message': "POST is required."})
 
 def molecule(request, molecule_id):
     molecule = Molecule.objects.get(uuid=molecule_id)

@@ -11,7 +11,7 @@
 </h1>
   {% if project.is_ready %}
   {% if n_smiles is None %}
-  <h2 class="h4">Filter</h2>
+  <h2 class="h4">Filters</h2>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox1" name="filter" value="Ro5" {% if 'Ro5' in filter_names %}checked{% endif %}>
     <label class="form-check-label" for="inlineCheckbox1">Rule of Five (Ro5)</label>
@@ -24,14 +24,14 @@
       <input class="form-check-input" type="checkbox" id="inlineCheckbox3" name="filter" value="MCF" {% if 'MCF' in filter_names %}checked{% endif %}>
     <label class="form-check-label" for="inlineCheckbox3">MCF</label>
   </div>
-  <div class="form-check form-check-inline">
+  <!--<div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox4" name="filter" value="dislike" {% if 'dislike' in filter_names %}checked{% endif %}>
     <label class="form-check-label" for="inlineCheckbox4">&#x1f44e;</label>
   </div>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox5" name="filter" value="like" {% if 'like' in filter_names %}checked{% endif %}>
     <label class="form-check-label" for="inlineCheckbox5">&#x1f44d;</label>
-  </div>
+  </div>-->
   <div class="form-check form-check-inline">
   {% if smarts is None %}
   <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smarts" value="{{ smarts|urlencode}}" disabled>
@@ -52,9 +52,9 @@
   <div><a href="{% url 'viewer' project.id %}">Go to project home</a></div>
   {% endif %}
   <div class="mt-4">
-      <button class="btn btn-danger" id="dislike_all">&#x1f44e; to all</button>
+      <!--<button class="btn btn-danger" id="dislike_all">&#x1f44e; to all</button>
       <button class="btn btn-info text-light" id="like_all">&#x1f44d; to all</button>
-      <button class="btn btn-primary" id="clear_all">Clear Evaluations</button>
+      <button class="btn btn-primary" id="clear_all">Clear Evaluations</button>-->
       <a href="{% url 'export' project.id %}{% if url_params %}?{{ url_params }}{% endif %}" class="btn btn-secondary" download="{{ project.name }}.smi">Export</a>
   </div>
   <hr class="mt-4 mb-5">
@@ -64,12 +64,12 @@
   {% endif %}
   {% load static %}
   <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-2">
-  {% for molecule, liked, disliked, evaluated, evaluation in mol_info %}
+  {% for molecule, liked, disliked, evaluated, evaluation, done in mol_info %}
     <div class="col">
       <div class="card">
-      <div class="dropdown text-end">
+        <div class="dropdown bg-light text-end">
 	{% if request.user.is_authenticated %}
-        <button class="btn btn-sm text-secondary" id="evaluate_{{molecule.pk}}" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true" data-bs-content='
+        <button class="btn btn-sm text-secondary" id="evaluate_{{molecule.pk}}" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true" data-bs-content='
     <ul>
         <li><div>Chemical stability or Reactivity</div>
 	&#x1f44e; <input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score1}}"> &#x1f44d;
@@ -88,14 +88,17 @@
         </li>
 	<li><label>Specific comments (if any)</label><br><textarea id="freeform_{{molecule.pk}}">{{evaluation.free_form}}</textarea></li>
     </ul>
-    <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-sm btn-light" value="Submit" onclick="eval_mol({{molecule.pk}})">
- '>Evaluate {% if evaluated %}&#9989;{% endif %}</button>{% endif %}
-        <button class="btn btn-sm dropdown-toggle dropdown-toggle-split text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
-            <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
-            <li><a class="dropdown-item" href="{% url 'search' project.id %}?smiles={{ molecule.smiles|urlencode }}">Substructure Search</a></li>
-            <li><a class="dropdown-item" href="{% url 'viewer' project.id %}?neighbor={{ molecule.pk }}">Nearest Neighbor Search</a></li>
-        </ul>
+    <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-sm btn-light" value="Save" onclick="eval_mol({{molecule.pk}})">
+ '>Evaluate </button>{% endif %}
+            <button class="btn btn-sm dropdown-toggle dropdown-toggle-split text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
+                <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
+                <li><a class="dropdown-item" href="{% url 'search' project.id %}?smiles={{ molecule.smiles|urlencode }}">Substructure Search</a></li>
+                <li><a class="dropdown-item" href="{% url 'viewer' project.id %}?neighbor={{ molecule.pk }}">Nearest Neighbor Search</a></li>
+            </ul>
+        </div>
+      <div class="card-subtitle text-muted">
+        {{molecule.local_id}}
       </div>
         {% if molecule.inchikey == "" %}
         <span>Invalid SMILES: {{molecule.smiles}}</span>
@@ -121,9 +124,9 @@
           {% endfor %}
         </div>
         <div class="btn-group d-flex w-100">
-            <button type="button" class="btn w-100 {% if disliked %}btn-danger disliked{% else %}btn-outline-light dislike{% endif %}" id="dislike_{{molecule.pk}}" value="{{molecule.pk}}">&#x1f44e; <span class="{% if disliked %}text-light{% else %}text-secondary{% endif %}" id="dislike_count_{{ molecule.pk }}">{% if molecule.dislike_count > 0 %}{{ molecule.dislike_count }}{% endif %}</span></button>
-            <button type="button" class="btn w-100 {% if liked %}btn-info liked{% else %}btn-outline-light like{%endif %}" id="like_{{molecule.pk}}" value="{{molecule.pk}}">&#x1f44d; <span class="{% if liked %}text-light{% else %}text-secondary{% endif %}" id="like_count_{{ molecule.pk }}">{% if molecule.like_count > 0 %}{{ molecule.like_count }}{% endif %}</span></button>
-        </div>
+            <button type="button" id="wip_{{molecule.pk}}" class="btn w-100 text-muted {% if evaluated and not done %}btn-info{% endif %}">WIP &#128221;</span></button>
+            <button type="button" id="done_{{molecule.pk}}" class="btn w-100 text-muted {% if done %}btn-info{% endif %}" onclick="done_mol({{molecule.pk}})">Done &#x1f44d;</button>
+	</div>
       </div>
     </div>
   {% endfor %}
@@ -176,6 +179,15 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@rdkit/rdkit/Code/MinimalLib/dist/RDKit_minimal.js"></script>
 <script>
+window.addEventListener( "pageshow", function ( event ) {
+var historyTraversal = event.persisted ||
+     ( typeof window.performance != "undefined" &&
+              window.performance.navigation.type === 2 );
+  if ( historyTraversal ) {
+    // Handle page restore.
+    window.location.reload();
+  }
+});
 function eval_mol(molecule_id) {
     console.log(molecule_id);
     console.log($("input[name=question1_" + molecule_id + "]").val()); 
@@ -201,10 +213,39 @@ function eval_mol(molecule_id) {
         success: function (data) {
             console.log(data);
             if (data.success) {
-                $("#submit_" + molecule_id).attr("value", "Done!");
-		$("#evaluate_" + molecule_id).html("Evaluate &#9989");
+                $("#submit_" + molecule_id).attr("value", "Saved!");
+		$("#wip_" + molecule_id).addClass("btn-info");
             } else {
                 $("#submit_" + molecule_id).attr("value", "Failed.");
+            }
+        }
+    }).fail(function() {
+        return false;
+    });
+    return true;
+}
+function done_mol(molecule_id) {
+    console.log(molecule_id);
+    $.ajax({
+        url: '{% url "done_molecule" %}',
+        type: 'POST',
+        data: {
+            'molecule_id': molecule_id,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        dataType: 'json',
+        success: function (data) {
+            console.log(data);
+            if (data.success) {
+	      if (data.done) {
+                $("#done_" + molecule_id).addClass("btn-info");
+		$("#wip_" + molecule_id).removeClass("btn-info");
+	      } else {
+                $("#done_" + molecule_id).removeClass("btn-info");
+		$("#wip_" + molecule_id).addClass("btn-info");
+	      }
+	    } else {
+              alert(data.message);
             }
         }
     }).fail(function() {

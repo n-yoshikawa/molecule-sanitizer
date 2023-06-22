@@ -18,6 +18,10 @@ class Project(models.Model):
     updated_at = models.DateField(auto_now_add=True)
 
 
+class Done(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    flag = models.BooleanField(default=False)
+
 class Evaluation(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     LIKE = 'LIKE'
@@ -45,9 +49,11 @@ class Molecule(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     smiles = models.TextField()
+    local_id = models.TextField()
     inchikey = models.CharField(max_length=27)
     evaluation = models.ManyToManyField(Evaluation)
     evaluation_detail = models.ManyToManyField(EvaluationDetail)
+    is_done = models.ManyToManyField(Done)
     tags = models.ManyToManyField(Tag)
     like_count = models.IntegerField(default=0)
     dislike_count = models.IntegerField(default=0)
