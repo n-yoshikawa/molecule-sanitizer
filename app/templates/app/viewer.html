@@ -11,18 +11,18 @@
 </h1>
   {% if project.is_ready %}
   {% if n_smiles is None %}
-  <h2 class="h4">Filters</h2>
+  <h2 class="h4">Filters <span class="h6">(only show matching compounds)</span></h2>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox1" name="filter" value="Ro5" {% if 'Ro5' in filter_names %}checked{% endif %}>
-    <label class="form-check-label" for="inlineCheckbox1">Rule of Five (Ro5)</label>
+    <label class="form-check-label" for="inlineCheckbox1">Rule of Five (Ro5) satisfied</label>
   </div>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox2" name="filter" value="PAINS" {% if 'PAINS' in filter_names %}checked{% endif %}>
-    <label class="form-check-label" for="inlineCheckbox2">PAINS</label>
+    <label class="form-check-label" for="inlineCheckbox2">PAINS matched</label>
   </div>
   <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox3" name="filter" value="MCF" {% if 'MCF' in filter_names %}checked{% endif %}>
-    <label class="form-check-label" for="inlineCheckbox3">MCF</label>
+    <label class="form-check-label" for="inlineCheckbox3">MCF matched</label>
   </div>
   <!--<div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" id="inlineCheckbox4" name="filter" value="dislike" {% if 'dislike' in filter_names %}checked{% endif %}>
@@ -40,6 +40,22 @@
   <input class="form-check-input" type="checkbox" id="inlineCheckbox6" name="smarts" value="{{ smarts|urlencode }}" checked>
       <label class="form-check-label" for="inlineCheckbox6">Substructure <code>{{ smarts }}</code></label>
   {% endif %}
+  </div>
+  {% endif %}
+  {% if request.user.is_authenticated %}
+  <div class="mt-2">
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="inlineCheckbox7" name="filter" value="unevaluated" {% if 'unevaluated' in filter_names %}checked{% endif %}>
+      <label class="form-check-label" for="inlineCheckbox7">Unevaluated</label>
+    </div>
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="inlineCheckbox8" name="filter" value="wip" {% if 'wip' in filter_names %}checked{% endif %}>
+      <label class="form-check-label" for="inlineCheckbox8">Work in progress</label>
+    </div>
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="inlineCheckbox9" name="filter" value="done" {% if 'done' in filter_names %}checked{% endif %}>
+      <label class="form-check-label" for="inlineCheckbox9">Done</label>
+    </div>
   </div>
   {% endif %}
   {% if smarts is not None %}
@@ -63,33 +79,15 @@
   <p>No molecule is found.</p>
   {% endif %}
   {% load static %}
-  <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-2">
+  {% if request.user.is_authenticated %}
+  <div class="row row-cols-1 row-cols-lg-2 g-2">
+  {% else %}
+  <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+  {% endif %}
   {% for molecule, liked, disliked, evaluated, evaluation, done in mol_info %}
-    <div class="col">
+    <div class="col d-flex align-items-stretch">
       <div class="card">
         <div class="dropdown bg-light text-end">
-	{% if request.user.is_authenticated %}
-        <button class="btn btn-sm text-secondary" id="evaluate_{{molecule.pk}}" title="Evaluation form" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-html="true" data-bs-content='
-    <ul>
-        <li><div>Chemical stability or Reactivity</div>
-	&#x1f44e; <input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score1}}"> &#x1f44d;
-        </li>
-        <li><div>Synthetic accessibility</div>
-            &#x1f44e; <input type="range" name="question2_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score2}}"> &#x1f44d;
-        </li>
-        <li><div>Synthetic amenability to diverse derivatizations</div>
-            &#x1f44e; <input type="range" name="question3_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score3}}"> &#x1f44d;
-        </li>
-        <li><div>Structural alerts</div>
-            &#x1f44e; <input type="range" name="question4_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score4}}"> &#x1f44d;
-        </li>
-        <li><div>Potential for bioactivity</div>
-            &#x1f44e; <input type="range" name="question5_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score5}}"> &#x1f44d;
-        </li>
-	<li><label>Specific comments (if any)</label><br><textarea id="freeform_{{molecule.pk}}">{{evaluation.free_form}}</textarea></li>
-    </ul>
-    <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-sm btn-light" value="Save" onclick="eval_mol({{molecule.pk}})">
- '>Evaluate </button>{% endif %}
             <button class="btn btn-sm dropdown-toggle dropdown-toggle-split text-secondary" type="button" id="menu{{molecule.pk}}" data-bs-toggle="dropdown" aria-expanded="false"></button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menu{{molecule.pk}}">
                 <li><a class="dropdown-item" href="{% url 'molecule' molecule.uuid %}">Details</a></li>
@@ -97,35 +95,95 @@
                 <li><a class="dropdown-item" href="{% url 'viewer' project.id %}?neighbor={{ molecule.pk }}">Nearest Neighbor Search</a></li>
             </ul>
         </div>
-      <div class="card-subtitle text-muted">
-        {{molecule.local_id}}
-      </div>
-        {% if molecule.inchikey == "" %}
-        <span>Invalid SMILES: {{molecule.smiles}}</span>
-        {% else %}
-
-       <a href="{% url 'molecule' molecule.uuid %}">
-        <div class="ratio ratio-4x3">
-            <canvas class="mol_images" width="400" height="300">{{ molecule.smiles }}</canvas>
+        <div class="card-subtitle text-muted">
+          {{molecule.local_id}}
         </div>
-       </a>
-        {% endif %}
-        <div class="card-body">
-            {% for tag in molecule.tags.all %}
-            {% if tag.name == 'Ro5' %}
-            <span class="badge rounded-pill bg-primary"><small>{{tag.name}}</small></span>
-            {% elif tag.name == 'PAINS' %}
-            <span class="badge rounded-pill bg-danger"><small>{{tag.name}}</small></span>
-            {% elif tag.name == 'MCF' %}
-            <span class="badge rounded-pill bg-warning text-dark"><small>{{tag.name}}</small></span>
+	{% if request.user.is_authenticated %}
+	<div class="row row-cols-2">
+	{% else %}
+	<div class="row row-cols-1">
+	{% endif %}
+	  <div class="col">
+            {% if molecule.inchikey == "" %}
+            <span>Invalid SMILES: {{molecule.smiles}}</span>
+            {% else %}
+              <a href="{% url 'molecule' molecule.uuid %}">
+                <div class="ratio ratio-4x3">
+                  <canvas class="mol_images" width="400" height="300">{{ molecule.smiles }}</canvas>
+                </div>
+              </a>
             {% endif %}
-            {% empty %}
-            <span class="badge rounded-pill bg-light"><small></small></span>
-          {% endfor %}
-        </div>
-        <div class="btn-group d-flex w-100">
+            <div class="card-body">
+                {% for tag in molecule.tags.all %}
+                {% if tag.name == 'Ro5' %}
+                <span class="badge rounded-pill bg-primary"><small>{{tag.name}}</small></span>
+                {% elif tag.name == 'PAINS' %}
+                <span class="badge rounded-pill bg-danger"><small>{{tag.name}}</small></span>
+                {% elif tag.name == 'MCF' %}
+                <span class="badge rounded-pill bg-warning text-dark"><small>{{tag.name}}</small></span>
+                {% endif %}
+                {% empty %}
+                <span class="badge rounded-pill bg-light"><small></small></span>
+              {% endfor %}
+	      <small>
+              <dl>
+                <dt>SMILES</dt>
+                <dd style="word-wrap: break-word;">{{ molecule.smiles }}</dd>
+                <dt>Molecular Weight</dt>
+                <dd>{{ molecule.molecular_weight|floatformat:2 }}</dd>
+                <dt>LogP</dt>
+                <dd>{{ molecule.logp|floatformat:2 }}</dd>
+              </dl>
+	      </small>
+            </div>
+	  </div>
+	  {% if request.user.is_authenticated %}
+	  <div class="col">
+	  <small>
+	    <div class="mb-2">
+              <label class="form-label">Chemical stability or Reactivity</label>
+	      <div class="row">
+	        <div class="col-1">&#x1f44e;</div><div class="col-auto"><input type="range" name="question1_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score1}}"></div><div class="col-1 px-0">&#x1f44d;</div>
+	      </div>
+            </div>
+	    <div class="mb-2">
+              <label class="form-label">Synthetic accessibility</label>
+	      <div class="row">
+	        <div class="col-1">&#x1f44e;</div><div class="col-auto"><input type="range" name="question2_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score2}}"></div><div class="col-1 px-0">&#x1f44d;</div>
+	      </div>
+            </div>
+	    <div class="mb-2">
+              <label class="form-label">Synthetic amenability to diverse derivatizations</label>
+	      <div class="row">
+	        <div class="col-1">&#x1f44e;</div><div class="col-auto"><input type="range" name="question3_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score3}}"></div><div class="col-1 px-0">&#x1f44d;</div>
+	      </div>
+            </div>
+	    <div class="mb-2">
+              <label class="form-label">Structural alerts</label>
+	      <div class="row">
+	        <div class="col-1">&#x1f44e;</div><div class="col-auto"><input type="range" name="question4_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score4}}"></div><div class="col-1 px-0">&#x1f44d;</div>
+	      </div>
+            </div>
+	    <div class="mb-2">
+              <label class="form-label">Potential for bioactivity</label>
+	      <div class="row">
+	        <div class="col-1">&#x1f44e;</div><div class="col-auto"><input type="range" name="question5_{{molecule.pk}}" min="1" max="3" step="1" value="{{evaluation.score5}}"></div><div class="col-1 px-0">&#x1f44d;</div>
+	      </div>
+            </div>
+	    <div class="mb-2">
+              <label class="form-label">Specific comments (if any)</label>
+              <textarea class="form-control" id="freeform_{{molecule.pk}}">{{evaluation.free_form}}</textarea>
+	    </div>
+	    <div class="mb-3">
+            <input type="submit" id="submit_{{molecule.pk}}" class="btn btn-primary" value="Save" onclick="eval_mol({{molecule.pk}})">
+	    </div>
+	   </div>
+	  </small>
+	</div>
+        <div class="btn-group d-flex w-100 mt-auto">
             <button type="button" id="wip_{{molecule.pk}}" class="btn w-100 text-muted {% if evaluated and not done %}btn-info{% endif %}">WIP &#128221;</span></button>
             <button type="button" id="done_{{molecule.pk}}" class="btn w-100 text-muted {% if done %}btn-info{% endif %}" onclick="done_mol({{molecule.pk}})">Done &#x1f44d;</button>
+	{% endif %}
 	</div>
       </div>
     </div>
@@ -189,13 +247,6 @@ var historyTraversal = event.persisted ||
   }
 });
 function eval_mol(molecule_id) {
-    console.log(molecule_id);
-    console.log($("input[name=question1_" + molecule_id + "]").val()); 
-    console.log($("input[name=question2_" + molecule_id + "]").val()); 
-    console.log($("input[name=question3_" + molecule_id + "]").val()); 
-    console.log($("input[name=question4_" + molecule_id + "]").val()); 
-    console.log($("input[name=question5_" + molecule_id + "]").val()); 
-    console.log($("#freeform_" + molecule_id).val()); 
     $.ajax({
         url: '{% url "evaluation_detail" %}',
         type: 'POST',
@@ -211,10 +262,11 @@ function eval_mol(molecule_id) {
         },
         dataType: 'json',
         success: function (data) {
-            console.log(data);
             if (data.success) {
                 $("#submit_" + molecule_id).attr("value", "Saved!");
-		$("#wip_" + molecule_id).addClass("btn-info");
+                if (!$("#done_" + molecule_id).hasClass("btn-info")) {
+		  $("#wip_" + molecule_id).addClass("btn-info");
+		}
             } else {
                 $("#submit_" + molecule_id).attr("value", "Failed.");
             }
@@ -225,7 +277,6 @@ function eval_mol(molecule_id) {
     return true;
 }
 function done_mol(molecule_id) {
-    console.log(molecule_id);
     $.ajax({
         url: '{% url "done_molecule" %}',
         type: 'POST',
@@ -235,7 +286,6 @@ function done_mol(molecule_id) {
         },
         dataType: 'json',
         success: function (data) {
-            console.log(data);
             if (data.success) {
 	      if (data.done) {
                 $("#done_" + molecule_id).addClass("btn-info");
@@ -461,8 +511,7 @@ $(document).ready(function() {
     $('input[type=checkbox][name=smarts]').change(function() {
         var checkboxValues = [];
         $('input[type="checkbox"][name=filter]:checked').each(function(index, elem) {
-            checkboxValues.push($(elem).val());
-        });
+            checkboxValues.push($(elem).val()); });
         if (checkboxValues.length == 0) {
             location.href = "{% url 'viewer' project.id %}";
         }

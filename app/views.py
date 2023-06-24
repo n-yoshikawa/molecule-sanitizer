@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from social_django.models import UserSocialAuth
-from .models import UserProfile, Project, Molecule, Evaluation, Tag, EvaluationDetail, Done
+from .models import UserProfile, Project, Molecule, Evaluation, Tag, EvaluationDetail
 
 import os
 import threading
@@ -140,6 +141,12 @@ def apply_filter(project, profile, filter_names, smarts, neighbor):
             elif filter_name == 'dislike':
                 evaluation = Evaluation.objects.get(user=profile, evaluation_type='DisLike')
                 molecules = molecules.filter(evaluation=evaluation)
+            elif filter_name == 'unevaluated':
+                molecules = molecules.exclude(evaluation_detail__user=profile)
+            elif filter_name == 'wip':
+                molecules = molecules.filter(evaluation_detail__user=profile, evaluation_detail__done=False)
+            elif filter_name == 'done':
+                molecules = molecules.filter(evaluation_detail__user=profile, evaluation_detail__done=True)
     # Reorder molecules so that invalid molecules comes later
     molecules = [m for m in molecules.exclude(inchikey="")] + [m for m in molecules.filter(inchikey="")]
     if smarts is not None:
@@ -178,10 +185,7 @@ def viewer(request, project_id):
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
-            try:
-                profile = UserProfile.objects.get(user=None)
-            except:
-                profile = UserProfile.objects.create(user=None)
+            profile, _ = UserProfile.objects.get_or_create(user=None)
         molecules = apply_filter(project, profile, filter_names, smarts, neighbor)
         filter_names_url = None
         if filter_names:
@@ -200,10 +204,12 @@ def viewer(request, project_id):
         for molecule in molecules:
             liked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='Like')) > 0 else False
             disliked = True if len(molecule.evaluation.filter(user=profile, evaluation_type='DisLike')) > 0 else False
-            evaluated = True if len(molecule.evaluation_detail.filter(user=profile)) > 0 else False
-            done, _ = molecule.is_done.get_or_create(user=profile)
-            done = done.flag
-            if len(molecule.evaluation_detail.filter(user=profile)) > 0:
+            evaluated = True if molecule.evaluation_detail.filter(user=profile).exists() else False
+            if molecule.evaluation_detail.filter(user=profile).exists():
+                done = molecule.evaluation_detail.get(user=profile).done
+            else:
+                done = False
+            if request.user.is_authenticated and molecule.evaluation_detail.filter(user=profile).exists():
                 evaluation = molecule.evaluation_detail.get(user=profile)
             else:
                 evaluation = {"score1": 2, "score2": 2, "score3": 2, "score4": 2, "score5": 2, "free_form": ""}
@@ -220,6 +226,7 @@ def viewer(request, project_id):
             url_params = f'smarts={urllib.parse.quote_plus(smarts)}'
         elif neighbor:
             url_params = f'neighbor={neighbor}'
+
         n_smiles = None
         if neighbor:
             n_mol = Molecule.objects.get(pk=int(neighbor))
@@ -343,14 +350,12 @@ def evaluation_detail(request):
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
-            profile = UserProfile.objects.get(user=None)
+            return JsonResponse({'success': False})
 
         molecule_id = request.POST.get('molecule_id')
-        print(request.POST)
-        print(request.POST.get('score1'))
         molecule = Molecule.objects.get(id=molecule_id)
-        if molecule.evaluation_detail.filter(user=profile):
-            evaluation = molecule.evaluation_detail.filter(user=profile)[0]
+        if molecule.evaluation_detail.filter(user=profile).exists():
+            evaluation = molecule.evaluation_detail.get(user=profile)
         else:
             evaluation = EvaluationDetail.objects.create(user=profile)
             molecule.evaluation_detail.add(evaluation)
@@ -372,27 +377,23 @@ def done_molecule(request):
             user = UserSocialAuth.objects.get(user_id=request.user.id)
             profile = UserProfile.objects.get(user=user)
         else:
-            profile = UserProfile.objects.get(user=None)
+            return JsonResponse({'success': False})
 
         molecule_id = request.POST.get('molecule_id')
-        print(request.POST)
         molecule = Molecule.objects.get(id=molecule_id)
 
         if not molecule.evaluation_detail.filter(user=profile):
             return JsonResponse({'success': False, 'message': "You need to submit an evaluation!"})
 
-        if molecule.is_done.filter(user=profile):
-            done = molecule.is_done.filter(user=profile)[0]
-        else:
-            done = Done.objects.create(user=profile)
-            molecule.is_done.add(done)
+        evaluation = molecule.evaluation_detail.get(user=profile)
+
         with transaction.atomic():
-            if done.flag:
-                done.flag = False
+            if evaluation.done:
+                evaluation.done = False
             else:
-                done.flag = True
-            done.save()
-        return JsonResponse({'success': True, 'done': done.flag})
+                evaluation.done = True
+            evaluation.save()
+        return JsonResponse({'success': True, 'done': evaluation.done})
     else:
         return JsonResponse({'success': False, 'message': "POST is required."})
 

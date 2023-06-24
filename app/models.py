@@ -17,11 +17,6 @@ class Project(models.Model):
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now_add=True)
 
-
-class Done(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    flag = models.BooleanField(default=False)
-
 class Evaluation(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     LIKE = 'LIKE'
@@ -41,6 +36,7 @@ class EvaluationDetail(models.Model):
     score4 = models.IntegerField(default=-1)
     score5 = models.IntegerField(default=-1)
     free_form = models.TextField(default="")
+    done = models.BooleanField(default=False)
 
 class Tag(models.Model):
     name = models.CharField(max_length=32)
@@ -53,7 +49,6 @@ class Molecule(models.Model):
     inchikey = models.CharField(max_length=27)
     evaluation = models.ManyToManyField(Evaluation)
     evaluation_detail = models.ManyToManyField(EvaluationDetail)
-    is_done = models.ManyToManyField(Done)
     tags = models.ManyToManyField(Tag)
     like_count = models.IntegerField(default=0)
     dislike_count = models.IntegerField(default=0)
